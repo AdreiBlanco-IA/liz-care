@@ -1,0 +1,9 @@
+ RUN  v3.2.4 /Users/adreiblancomarquez/liz-care
+
+ ✓ tests/pacientes.test.ts (21 tests) 6ms
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  10:13:47
+   Duration  463ms (transform 62ms, setup 0ms, collect 61ms, tests 6ms, environment 0ms, prepare 97ms)
+

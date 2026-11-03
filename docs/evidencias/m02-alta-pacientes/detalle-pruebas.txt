@@ -1,0 +1,21 @@
+ ✓ tests/pacientes.test.ts > PT01-N · CA-01 normal: alta válida > crea un solo paciente con identificador y conserva datos y contacto de emergencia 3ms
+ ✓ tests/pacientes.test.ts > PT01-N · CA-01 normal: alta válida > normaliza espacios y guarda el correo en minúsculas sin alterar acentos 0ms
+ ✓ tests/pacientes.test.ts > PT01-L · CA-01 límite: un solo apellido > acepta el alta con segundo apellido vacío 0ms
+ ✓ tests/pacientes.test.ts > PT01-E · CA-01 error: correo duplicado > bloquea un correo ya registrado aunque cambien mayúsculas o espacios 0ms
+ ✓ tests/pacientes.test.ts > PT01-E · CA-01 error: correo duplicado > no permite forzar el duplicado de correo con la confirmación de homónimo 0ms
+ ✓ tests/pacientes.test.ts > PT01-E · CA-01 error: correo duplicado > mismo nombre y fecha con otro correo solo advierte y se puede confirmar 0ms
+ ✓ tests/pacientes.test.ts > PT01-E · CA-01 error: correo duplicado > compartir solo el nombre no cuenta como duplicado 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin nombre y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin apellidoPaterno y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin fechaNacimiento y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin email y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin telefono y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin padecimientoPrincipal y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin emNombre y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin emParentesco y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza el alta sin emTelefono y no guarda nada 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > rechaza correo con formato inválido y fecha de nacimiento futura 0ms
+ ✓ tests/pacientes.test.ts > PT01-E2 · CA-01 error: datos obligatorios faltantes o inválidos > acepta como nacimiento la fecha de hoy 0ms
+ ✓ tests/pacientes.test.ts > PT01-E3 · CA-13: alta sin permiso > deniega el alta sin sesión 0ms
+ ✓ tests/pacientes.test.ts > PT01-E3 · CA-13: alta sin permiso > deniega el alta con sesión de paciente 0ms
+ ✓ tests/pacientes.test.ts > PT01-E4 · CA-01: fallo de persistencia > no confirma éxito si el guardado falla y el reintento crea un solo registro 0ms
