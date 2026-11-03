@@ -1,7 +1,11 @@
 # Liz Care — Plataforma y sistema gestor de pacientes
 
 Prototipo de interfaz (solo frontend) para Liz Care, desarrollado por Summit AI SA de CV.
-Los datos son de prueba y viven en memoria: se reinician al recargar la página.
+Los datos son de prueba y viven en memoria: se reinician al recargar la página. La persistencia
+definitiva será Supabase (PostgreSQL, Auth y Storage privado) y está pendiente.
+
+Proyecto de la materia Desarrollo de Aplicaciones y Servicios Virtuales, Universidad Iberoamericana León.
+Equipo: Cristóbal Arellano Carranza y Adrei Blanco Márquez.
 
 ## Cómo correrlo
 
@@ -11,6 +15,21 @@ npm run dev
 ```
 
 Abre http://localhost:5173
+
+## Pruebas
+
+```bash
+npm test
+```
+
+## Módulos implementados
+
+| Módulo | Requerimiento | Código | Pruebas y evidencia |
+| --- | --- | --- | --- |
+| M02 Pacientes: alta | RF-01, HU-01, CA-01, CA-13 | `src/modules/pacientes/` | `tests/pacientes.test.ts`, `docs/evidencias/m02-alta-pacientes/` |
+
+Regla de duplicados: un correo ya registrado (sin distinguir mayúsculas ni espacios) bloquea el alta; mismo nombre y
+fecha de nacimiento solo muestra una advertencia que la administradora puede confirmar.
 
 ## Cuentas de demostración
 
