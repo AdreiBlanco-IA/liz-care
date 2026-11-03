@@ -2,24 +2,16 @@ import { AlertTriangle, ArrowLeft, HeartPulse, Phone, Save, Send, ShieldAlert, U
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Button, ButtonLink, Card, Field, Input, PageHeader, Select, Toggle } from '../../components/ui'
-import { edad, fechaCorta, nombreCompleto, normalizar } from '../../lib/format'
+import { edad, fechaCorta, nombreCompleto } from '../../lib/format'
 import { useStore } from '../../lib/store'
+import { PAISES, registrarPaciente } from '../../modules/pacientes/registro'
+import { buscarDuplicados, datosAltaVacios, type DatosAlta, type ErroresAlta } from '../../modules/pacientes/validacion'
 
-const nacionalidades: [string, string][] = [
-  ['Estadounidense', 'US'], ['Canadiense', 'CA'], ['Británica', 'GB'], ['Alemana', 'DE'], ['Francesa', 'FR'],
-  ['Española', 'ES'], ['Italiana', 'IT'], ['Japonesa', 'JP'], ['Coreana', 'KR'], ['China', 'CN'], ['Brasileña', 'BR'],
-  ['Argentina', 'AR'], ['Colombiana', 'CO'], ['Mexicana', 'MX'], ['Otra', 'XX'],
-]
+const nacionalidades = Object.keys(PAISES)
 const idiomas = ['Inglés', 'Español', 'Francés', 'Alemán', 'Portugués', 'Italiano', 'Japonés', 'Coreano', 'Chino', 'Otro']
 const parentescos = ['Esposo(a)', 'Pareja', 'Padre', 'Madre', 'Hijo(a)', 'Hermano(a)', 'Amigo(a)', 'Otro']
 
-const vacio = {
-  nombre: '', apellidoPaterno: '', apellidoMaterno: '', fechaNacimiento: '', sexo: '' as '' | 'F' | 'M' | 'X',
-  nacionalidad: '', idioma: '', telefono: '', email: '', padecimientoPrincipal: '',
-  emNombre: '', emParentesco: '', emTelefono: '',
-}
-type Form = typeof vacio
-const requeridos: (keyof Form)[] = ['nombre', 'apellidoPaterno', 'fechaNacimiento', 'sexo', 'nacionalidad', 'idioma', 'telefono', 'email', 'padecimientoPrincipal', 'emNombre', 'emParentesco', 'emTelefono']
+type Form = DatosAlta
 
 function Seccion({ icon, title, desc, children }: { icon: ReactNode; title: string; desc: string; children: ReactNode }) {
   return (
@@ -34,12 +26,13 @@ function Seccion({ icon, title, desc, children }: { icon: ReactNode; title: stri
 }
 
 export default function NuevoPaciente() {
-  const { pacientes, agregarPaciente, notify } = useStore()
+  const { pacientes, sesion, agregarPaciente, notify } = useStore()
   const navigate = useNavigate()
-  const [f, setF] = useState<Form>(vacio)
-  const [errores, setErrores] = useState<Partial<Record<keyof Form, string>>>({})
+  const [f, setF] = useState<Form>(datosAltaVacios)
+  const [errores, setErrores] = useState<ErroresAlta>({})
   const [invitar, setInvitar] = useState(true)
   const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
+  const [guardando, setGuardando] = useState(false)
 
   const set = (k: keyof Form) => (e: { target: { value: string } }) => {
     setF((x) => ({ ...x, [k]: e.target.value }))
@@ -47,45 +40,43 @@ export default function NuevoPaciente() {
     setConfirmarDuplicado(false)
   }
 
-  const duplicados = useMemo(() => {
-    const nom = normalizar(`${f.nombre} ${f.apellidoPaterno}`)
-    const mail = normalizar(f.email)
-    if (nom.length < 4 && !mail.includes('@')) return []
-    return pacientes.filter((p) => {
-      const mismoNombre = nom.length >= 4 && normalizar(`${p.nombre} ${p.apellidoPaterno}`) === nom
-      const mismoCorreo = mail.includes('@') && normalizar(p.email) === mail
-      const mismaFecha = !!f.fechaNacimiento && p.fechaNacimiento === f.fechaNacimiento
-      return mismoCorreo || (mismoNombre && (mismaFecha || !f.fechaNacimiento))
-    })
-  }, [f.nombre, f.apellidoPaterno, f.email, f.fechaNacimiento, pacientes])
+  const { porCorreo, porNombre } = useMemo(() => buscarDuplicados(f, pacientes), [f, pacientes])
+  const duplicados = porCorreo.length ? porCorreo : porNombre
+  const bloqueaCorreo = porCorreo.length > 0
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    const errs: typeof errores = {}
-    requeridos.forEach((k) => { if (!String(f[k]).trim()) errs[k] = 'Este campo es obligatorio.' })
-    if (f.email && !/^\S+@\S+\.\S+$/.test(f.email)) errs.email = 'Escribe un correo válido.'
-    if (f.fechaNacimiento && new Date(f.fechaNacimiento) > new Date()) errs.fechaNacimiento = 'La fecha no puede ser futura.'
-    setErrores(errs)
-    if (Object.keys(errs).length) {
-      notify('Revisa los campos marcados en rojo.', 'error')
-      document.querySelector('[aria-invalid="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (guardando) return
+    setGuardando(true)
+    const r = await registrarPaciente(f, { sesion, pacientes, guardar: agregarPaciente, invitarAlPortal: invitar, confirmaHomonimo: confirmarDuplicado })
+    setGuardando(false)
+    if (r.ok) {
+      notify(invitar ? `${r.paciente.nombre} fue registrado. Se envió la invitación al portal.` : `${r.paciente.nombre} fue registrado correctamente.`)
+      navigate(`/admin/pacientes/${r.paciente.id}`)
       return
     }
-    if (duplicados.length && !confirmarDuplicado) {
-      setConfirmarDuplicado(true)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
+    // Ante cualquier error se conservan los datos capturados para corregir o reintentar.
+    switch (r.motivo) {
+      case 'sin-permiso':
+        notify('Solo una administradora puede registrar pacientes.', 'error')
+        return
+      case 'datos-invalidos':
+        setErrores(r.errores)
+        notify('Revisa los campos marcados en rojo.', 'error')
+        requestAnimationFrame(() => document.querySelector('[aria-invalid="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+        return
+      case 'correo-duplicado':
+        setErrores({ email: 'Este correo ya pertenece a un paciente registrado.' })
+        notify('No se registró: el correo ya existe.', 'error')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      case 'posible-homonimo':
+        setConfirmarDuplicado(true)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      case 'error-guardado':
+        notify('No se pudo guardar el paciente. Tus datos siguen en el formulario; intenta de nuevo.', 'error')
     }
-    const pais = nacionalidades.find(([n]) => n === f.nacionalidad)?.[1] ?? 'XX'
-    const p = agregarPaciente({
-      nombre: f.nombre.trim(), apellidoPaterno: f.apellidoPaterno.trim(), apellidoMaterno: f.apellidoMaterno.trim() || undefined,
-      fechaNacimiento: f.fechaNacimiento, sexo: f.sexo as 'F' | 'M' | 'X', nacionalidad: f.nacionalidad, pais, idioma: f.idioma,
-      telefono: f.telefono.trim(), email: f.email.trim().toLowerCase(), padecimientoPrincipal: f.padecimientoPrincipal.trim(),
-      contactoEmergencia: { nombre: f.emNombre.trim(), parentesco: f.emParentesco, telefono: f.emTelefono.trim() },
-      activo: true, portal: invitar ? 'invitado' : 'sin acceso',
-    })
-    notify(invitar ? `${p.nombre} fue registrado. Se envió la invitación al portal.` : `${p.nombre} fue registrado correctamente.`)
-    navigate(`/admin/pacientes/${p.id}`)
   }
 
   const inv = (k: keyof Form) => ({ invalid: !!errores[k], 'aria-invalid': !!errores[k] })
@@ -99,15 +90,17 @@ export default function NuevoPaciente() {
       />
 
       {duplicados.length > 0 && (
-        <div className={`mb-6 animate-fade-up rounded-2xl border p-4 sm:p-5 ${confirmarDuplicado ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`} role="alert">
+        <div className={`mb-6 animate-fade-up rounded-2xl border p-4 sm:p-5 ${bloqueaCorreo || confirmarDuplicado ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`} role="alert">
           <div className="flex gap-3">
-            <AlertTriangle className={`size-5 shrink-0 ${confirmarDuplicado ? 'text-red-600' : 'text-amber-600'}`} />
+            <AlertTriangle className={`size-5 shrink-0 ${bloqueaCorreo || confirmarDuplicado ? 'text-red-600' : 'text-amber-600'}`} />
             <div className="flex-1">
-              <p className="font-bold text-ink-900">Posible paciente duplicado</p>
+              <p className="font-bold text-ink-900">{bloqueaCorreo ? 'Correo ya registrado' : 'Posible paciente duplicado'}</p>
               <p className="text-sm text-ink-600">
-                {confirmarDuplicado
-                  ? 'Confirma que se trata de una persona distinta. Presiona “Guardar paciente” otra vez para registrarlo de todos modos.'
-                  : 'Ya existe un paciente con datos muy parecidos. Verifica antes de guardar.'}
+                {bloqueaCorreo
+                  ? 'Ya existe un paciente con este correo. No se puede registrar de nuevo; abre su expediente o corrige el correo.'
+                  : confirmarDuplicado
+                    ? 'Confirma que se trata de una persona distinta. Presiona “Guardar paciente” otra vez para registrarlo de todos modos.'
+                    : 'Ya existe un paciente con el mismo nombre y fecha de nacimiento. Verifica antes de guardar.'}
               </p>
               <div className="mt-3 space-y-2">
                 {duplicados.map((p) => (
@@ -140,7 +133,7 @@ export default function NuevoPaciente() {
             </Field>
             <Field label="Nacionalidad" required error={errores.nacionalidad}>
               <Select value={f.nacionalidad} onChange={set('nacionalidad')} {...inv('nacionalidad')}>
-                <option value="">Selecciona</option>{nacionalidades.map(([n]) => <option key={n}>{n}</option>)}
+                <option value="">Selecciona</option>{nacionalidades.map((n) => <option key={n}>{n}</option>)}
               </Select>
             </Field>
             <Field label="Idioma preferido" required error={errores.idioma} hint="Define si necesitará traducción en sus consultas.">
@@ -181,7 +174,7 @@ export default function NuevoPaciente() {
           <Card className="p-5">
             <p className="text-sm text-ink-500">Los campos con <span className="font-bold text-brand-600">*</span> son obligatorios. Solo se guardan los datos necesarios para la atención del paciente (LFPDPPP).</p>
             <div className="mt-4 grid gap-2">
-              <Button type="submit" size="lg">{invitar ? <Send className="size-4.5" /> : <Save className="size-4.5" />} Guardar paciente</Button>
+              <Button type="submit" size="lg" disabled={guardando}>{invitar ? <Send className="size-4.5" /> : <Save className="size-4.5" />} Guardar paciente</Button>
               <ButtonLink to="/admin/pacientes" variant="ghost">Cancelar</ButtonLink>
             </div>
           </Card>
