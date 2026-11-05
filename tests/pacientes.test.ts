@@ -2,7 +2,7 @@
 // Datos ficticios de la práctica; los teléfonos no pertenecen a personas reales.
 import { describe, expect, it } from 'vitest'
 import type { Paciente, Sesion } from '../src/data/types'
-import { registrarPaciente, type NuevoPaciente } from '../src/modules/pacientes/registro'
+import { CorreoDuplicadoError, registrarPaciente, type NuevoPaciente } from '../src/modules/pacientes/registro'
 import { buscarDuplicados, normalizarAlta, validarAlta, type DatosAlta } from '../src/modules/pacientes/validacion'
 
 const HOY = new Date('2026-11-03T12:00:00')
@@ -145,5 +145,12 @@ describe('PT01-E4 · CA-01: fallo de persistencia', () => {
     expect((await alta(alex, a, { guardar })).ok).toBe(true)
     expect(a.pacientes).toHaveLength(1)
     expect(await alta(alex, a, { guardar })).toMatchObject({ ok: false, motivo: 'correo-duplicado' })
+  })
+})
+
+describe('PT01-E5 · CA-01: duplicado detectado por la base de datos', () => {
+  it('convierte el rechazo del índice único de correo en correo-duplicado', async () => {
+    const guardar = () => { throw new CorreoDuplicadoError() }
+    expect(await alta(alex, almacen(), { guardar })).toEqual({ ok: false, motivo: 'correo-duplicado', existentes: [] })
   })
 })

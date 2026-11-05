@@ -6,10 +6,18 @@ import { buscarDuplicados, normalizarAlta, validarAlta, type DatosAlta, type Err
 export type NuevoPaciente = Omit<Paciente, 'id' | 'altaEl' | 'color'>
 
 /**
- * Contrato con la persistencia. Hoy lo cumple el store en memoria del prototipo;
- * la implementación con Supabase queda pendiente (plan de implementación, T-02).
+ * Contrato con la persistencia: Supabase (src/data/pacientesSupabase.ts) o, sin configuración,
+ * el store en memoria del prototipo.
  */
 export type GuardarPaciente = (p: NuevoPaciente) => Promise<Paciente> | Paciente
+
+/** La persistencia rechazó el correo por repetido aunque la revisión previa no lo detectara. */
+export class CorreoDuplicadoError extends Error {
+  constructor() {
+    super('El correo ya pertenece a un paciente registrado.')
+    this.name = 'CorreoDuplicadoError'
+  }
+}
 
 export interface OpcionesAlta {
   sesion: Sesion | null
@@ -61,7 +69,8 @@ export async function registrarPaciente(d: DatosAlta, o: OpcionesAlta): Promise<
   try {
     const paciente = await o.guardar(aNuevoPaciente(d, o.invitarAlPortal))
     return { ok: true, paciente }
-  } catch {
+  } catch (e) {
+    if (e instanceof CorreoDuplicadoError) return { ok: false, motivo: 'correo-duplicado', existentes: [] }
     return { ok: false, motivo: 'error-guardado' }
   }
 }
