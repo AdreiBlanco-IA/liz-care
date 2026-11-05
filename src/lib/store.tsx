@@ -1,5 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { administradores, consultasIniciales, credencialesDemo, especialistas as especialistasIniciales, pacientesIniciales } from '../data/mock'
+import { insertarPaciente, listarPacientes } from '../data/pacientesSupabase'
+import { supabase } from '../data/supabase'
 import type { Consulta, Especialista, HistorialInicial, Paciente, Rol, Sesion } from '../data/types'
 
 interface Toast { id: number; msg: string; tipo: 'ok' | 'error' }
@@ -10,9 +12,9 @@ interface Store {
   especialistas: Especialista[]
   sesion: Sesion | null
   toasts: Toast[]
-  login: (email: string, password: string, rol: Rol) => boolean
+  login: (email: string, password: string, rol: Rol) => Promise<boolean>
   logout: () => void
-  agregarPaciente: (p: Omit<Paciente, 'id' | 'altaEl' | 'color'>) => Paciente
+  agregarPaciente: (p: Omit<Paciente, 'id' | 'altaEl' | 'color'>) => Promise<Paciente>
   agregarEspecialista: (e: Omit<Especialista, 'id'>) => Especialista
   agregarConsulta: (c: Omit<Consulta, 'id'>) => Consulta
   actualizarConsulta: (c: Consulta) => void
@@ -46,10 +48,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800)
   }, [])
 
-  const login = useCallback((email: string, password: string, rol: Rol) => {
+  // Con Supabase, la administración se lee de la base; los pacientes de demostración se conservan
+  // porque las consultas, la agenda y el portal todavía dependen de ellos.
+  useEffect(() => {
+    if (!supabase || sesion?.rol !== 'admin') return
+    let vigente = true
+    listarPacientes(supabase)
+      .then((remotos) => { if (vigente) setPacientes([...remotos, ...pacientesIniciales]) })
+      .catch(() => notify('No se pudieron cargar los pacientes guardados.', 'error'))
+    return () => { vigente = false }
+  }, [sesion?.rol, notify])
+
+  const login = useCallback(async (email: string, password: string, rol: Rol) => {
     const e = email.trim().toLowerCase()
     let s: Sesion | null = null
-    if (rol === 'admin' && password === credencialesDemo.admin.password) {
+    if (rol === 'admin' && supabase) {
+      // M01: la administradora entra con Supabase Auth y su rol se toma de public.perfil.
+      const { data, error } = await supabase.auth.signInWithPassword({ email: e, password })
+      if (error || !data.user) return false
+      const { data: perfil } = await supabase.from('perfil').select('nombre, rol').eq('usuario_id', data.user.id).maybeSingle()
+      if (perfil?.rol !== 'administrador') { await supabase.auth.signOut(); return false }
+      s = { rol, nombre: perfil.nombre, email: e }
+    } else if (rol === 'admin' && password === credencialesDemo.admin.password) {
       const a = administradores.find((x) => x.email === e)
       if (a) s = { rol, nombre: a.nombre, email: e }
     }
@@ -64,11 +84,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [pacientes])
 
   const logout = useCallback(() => {
+    void supabase?.auth.signOut()
+    setPacientes(pacientesIniciales)
     setSesion(null)
     try { sessionStorage.removeItem(SESSION_KEY) } catch { /* modo privado */ }
   }, [])
 
-  const agregarPaciente = useCallback((p: Omit<Paciente, 'id' | 'altaEl' | 'color'>) => {
+  const agregarPaciente = useCallback(async (p: Omit<Paciente, 'id' | 'altaEl' | 'color'>) => {
+    if (supabase && sesion?.rol === 'admin') {
+      const guardado = await insertarPaciente(supabase, p)
+      setPacientes((ps) => [guardado, ...ps])
+      return guardado
+    }
     const nuevo: Paciente = {
       ...p,
       id: `p${Date.now()}`,
@@ -77,7 +104,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     setPacientes((ps) => [nuevo, ...ps])
     return nuevo
-  }, [])
+  }, [sesion?.rol])
 
   const agregarEspecialista = useCallback((e: Omit<Especialista, 'id'>) => {
     const nuevo: Especialista = { ...e, id: `e${Date.now()}` }

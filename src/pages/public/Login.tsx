@@ -25,8 +25,8 @@ export default function Login() {
   const entrar = (e: string, p: string) => {
     setCargando(true)
     setError('')
-    setTimeout(() => {
-      const ok = login(e, p, rol)
+    setTimeout(async () => {
+      const ok = await login(e, p, rol)
       setCargando(false)
       if (!ok) { setError('Correo o contraseña incorrectos. Revisa tus datos e inténtalo de nuevo.'); return }
       const from = (location.state as { from?: string } | null)?.from
