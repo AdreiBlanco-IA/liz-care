@@ -65,7 +65,8 @@ function Check2({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 export default function HistorialForm() {
   const { t, lang } = useI18n()
   const { paciente } = usePaciente()
-  const { guardarHistorial, notify } = useStore()
+  const { enviarHistorialInicial, reportarFallo, notify } = useStore()
+  const [enviando, setEnviando] = useState(false)
   const navigate = useNavigate()
   const [paso, setPaso] = useState(0)
   const [pad, setPad] = useState<string[]>([])
@@ -105,25 +106,32 @@ export default function HistorialForm() {
     return ''
   }
 
-  const siguiente = () => {
+  // La validación por paso guía a la persona; al enviar, M03 decide de nuevo y garantiza el envío único.
+  const siguiente = async () => {
+    if (enviando) return
     const e = validar(paso)
     setError(e)
     if (e) return
     if (paso < 3) { setPaso(paso + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     for (let i = 0; i < 3; i++) { const er = validar(i); if (er) { setPaso(i); setError(er); return } }
-    guardarHistorial(paciente.id, {
-      completadoEl: new Date().toISOString(),
-      padecimientos: sinPad ? [] : pad,
-      sinPadecimientos: sinPad,
-      sinAlergias: tieneAlergias === false,
-      sinTratamientos: sinTrat,
-      alergias: tieneAlergias ? alergias : [],
-      tratamientos: sinTrat ? [] : trat,
-      cirugias: cirugias.trim() || undefined,
-      notas: notas.trim() || undefined,
+    setEnviando(true)
+    const r = await enviarHistorialInicial({
+      padecimientos: sinPad ? [] : pad, sinPadecimientos: sinPad,
+      alergias: tieneAlergias ? alergias : [], sinAlergias: tieneAlergias === false,
+      tratamientos: sinTrat ? [] : trat, sinTratamientos: sinTrat,
+      cirugias: cirugias, notas: notas,
     })
-    notify(t('form.enviado'))
-    navigate('/portal/expediente')
+    setEnviando(false)
+    if (r.ok) { notify(t('form.enviado')); navigate('/portal/expediente'); return }
+    if (r.motivo === 'ya-enviado') { notify(t('form.yaEnviado'), 'error'); navigate('/portal/expediente'); return }
+    if (r.motivo === 'datos-invalidos') {
+      const primero = (['padecimientos', 'alergias', 'tratamientos'] as const).findIndex((k) => r.errores[k])
+      setPaso(Math.max(primero, 0))
+      setError(r.errores.padecimientos ? t('form.errPad') : r.errores.alergias ? t('form.errAl') : t('form.errTr'))
+      return
+    }
+    if (r.motivo === 'sin-permiso') { setError(t('form.errPermiso')); return }
+    setError(`${t('form.errGuardado')} (${reportarFallo('enviar historial inicial')})`)
   }
 
   const s = sugerencias[lang]
@@ -236,7 +244,7 @@ export default function HistorialForm() {
 
         <div className="mt-8 flex items-center justify-between gap-3 border-t border-ink-100 pt-6">
           {paso > 0 ? <Button variant="ghost" onClick={() => { setPaso(paso - 1); setError('') }}><ArrowLeft className="size-4" />{t('form.anterior')}</Button> : <span />}
-          <Button size="lg" onClick={siguiente}>{paso === 3 ? <><Check className="size-4.5" />{t('form.enviar')}</> : <>{t('form.siguiente')}<ArrowRight className="size-4.5" /></>}</Button>
+          <Button size="lg" onClick={siguiente} disabled={enviando}>{paso === 3 ? <><Check className="size-4.5" />{t('form.enviar')}</> : <>{t('form.siguiente')}<ArrowRight className="size-4.5" /></>}</Button>
         </div>
       </Card>
     </div>

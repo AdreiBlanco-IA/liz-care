@@ -1,5 +1,5 @@
 import {
-  AlertTriangle, ArrowDownUp, ArrowLeft, CalendarDays, Cake, ChevronDown, ClipboardList, Eye, FileImage, Globe2, Languages, Lock,
+  AlertTriangle, ArrowDownUp, RotateCcw, ArrowLeft, CalendarDays, Cake, ChevronDown, ClipboardList, Eye, FileImage, Globe2, Languages, Lock,
   Mail, Phone, Pill, Plus, Send, ShieldAlert, Stethoscope, UserRound,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
@@ -7,8 +7,10 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Lightbox } from '../../components/Lightbox'
 import { Avatar, Badge, Button, ButtonLink, Card, CardHeader, DoctorChip, EmptyState, Tabs, cx } from '../../components/ui'
 import type { Consulta, Especialista } from '../../data/types'
-import { diaMes, edad, fechaCorta, fechaLarga, hora, nombreCompleto, porFechaAsc, porFechaDesc, relativo } from '../../lib/format'
+import { diaMes, edad, fechaCorta, fechaLarga, hora, nombreCompleto, relativo } from '../../lib/format'
 import { useStore } from '../../lib/store'
+import { citasPendientesDeRegistro, ordenCronologico, proximasDelPaciente } from '../../modules/citas/atenciones'
+import { obtenerExpediente } from '../../modules/expedientes/expediente'
 
 type Tab = 'resumen' | 'historial' | 'consultas' | 'recetas'
 
@@ -33,6 +35,15 @@ function Lista({ items, tone = 'gray' }: { items: string[]; tone?: 'gray' | 'red
 
 function TratamientoTabla({ c }: { c: Consulta }) {
   if (!c.tratamiento) return null
+  if (c.tratamiento.sinMedicamentos) {
+    return (
+      <div className="mt-4 rounded-xl border border-ink-100">
+        <div className="flex items-center gap-2 border-b border-ink-100 bg-ink-50/60 px-4 py-2.5 text-sm font-bold"><Pill className="size-4 text-brand-600" /> Tratamiento</div>
+        <p className="px-4 py-3 text-sm text-ink-600">Sin medicamentos en esta consulta (indicado expresamente).</p>
+        {c.tratamiento.indicacionesGenerales && <p className="border-t border-ink-100 px-4 py-3 text-sm text-ink-600"><span className="font-semibold text-ink-800">Indicaciones generales: </span>{c.tratamiento.indicacionesGenerales}</p>}
+      </div>
+    )
+  }
   return (
     <div className="mt-4 rounded-xl border border-ink-100">
       <div className="flex items-center gap-2 border-b border-ink-100 bg-ink-50/60 px-4 py-2.5 text-sm font-bold"><Pill className="size-4 text-brand-600" /> Tratamiento</div>
@@ -115,6 +126,12 @@ function ConsultaItem({ c, e, onReceta, defaultOpen }: { c: Consulta; e: Especia
               </div>
             )}
             <TratamientoTabla c={c} />
+            {!futura && (
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
+                {(!c.tratamiento || !c.receta) && <p className="text-xs text-ink-500">{!c.tratamiento ? 'Falta registrar los medicamentos o indicar que no hubo.' : 'Falta la foto de la receta.'}</p>}
+                <ButtonLink to={`/admin/consultas/nueva?paciente=${c.pacienteId}&consulta=${c.id}`} size="sm" variant="secondary">{!c.tratamiento || !c.receta ? 'Completar tratamiento y receta' : 'Editar tratamiento y receta'}</ButtonLink>
+              </div>
+            )}
             {futura && (
               <div className="mt-4 flex justify-end">
                 <ButtonLink to={`/admin/consultas/nueva?paciente=${c.pacienteId}&cita=${c.id}`} size="sm">Registrar resultado de la consulta</ButtonLink>
@@ -132,22 +149,35 @@ export default function PacienteDetalle() {
   const [params, setParams] = useSearchParams()
   const tab = (params.get('tab') as Tab) || 'resumen'
   const setTab = (t: Tab) => setParams({ tab: t }, { replace: true })
-  const { pacientes, consultas, especialistas, notify } = useStore()
+  const { pacientes, consultas, especialistas, sesion, notify } = useStore()
   const [asc, setAsc] = useState(false)
   const [receta, setReceta] = useState<string | null>(null)
 
-  const p = pacientes.find((x) => x.id === id)
-  if (!p) {
-    return <Card><EmptyState icon={<UserRound className="size-6" />} title="Paciente no encontrado" text="Es posible que el enlace sea incorrecto." action={<ButtonLink to="/admin/pacientes">Volver a pacientes</ButtonLink>} /></Card>
+  // CA-03 error: `?simularError=1` reproduce una falla de carga para la prueba PT03; «Reintentar» quita la bandera.
+  const fallo = params.get('simularError') === '1'
+  const reintentar = () => setParams((x) => { const n = new URLSearchParams(x); n.delete('simularError'); return n }, { replace: true })
+
+  // M07 compone el expediente según el rol de la sesión (M01 decide el acceso).
+  const r = obtenerExpediente(sesion, id ?? '', { pacientes, consultas })
+  if (fallo) {
+    return (
+      <Card><EmptyState icon={<AlertTriangle className="size-6" />} title="No se pudo cargar el historial"
+        text="Ocurrió un error al leer el expediente. Esto no significa que esté vacío. Inténtalo de nuevo."
+        action={<Button variant="secondary" size="sm" onClick={reintentar}><RotateCcw className="size-4" /> Reintentar</Button>} /></Card>
+    )
   }
+  if (!r.ok || r.expediente.vista !== 'admin') {
+    const sinPermiso = !r.ok && r.motivo !== 'no-existe'
+    return <Card><EmptyState icon={<UserRound className="size-6" />} title={sinPermiso ? 'Sin acceso' : 'Paciente no encontrado'} text={sinPermiso ? 'Tu sesión no puede ver este expediente.' : 'Es posible que el enlace sea incorrecto.'} action={<ButtonLink to="/admin/pacientes">Volver a pacientes</ButtonLink>} /></Card>
+  }
+  const { paciente: p, historial: h, programadas, realizadas: completadas } = r.expediente
 
   const esp = (eid: string) => especialistas.find((e) => e.id === eid)!
-  const cs = consultas.filter((c) => c.pacienteId === p.id)
-  const ordenadas = [...cs].sort(asc ? porFechaAsc : porFechaDesc)
-  const completadas = cs.filter((c) => c.estado === 'completada').sort(porFechaDesc)
-  const proxima = cs.filter((c) => c.estado === 'programada' && new Date(c.fecha) >= new Date()).sort(porFechaAsc)[0]
+  const cs = [...programadas, ...completadas]
+  const ordenadas = ordenCronologico(cs, asc ? 'asc' : 'desc')
+  const proxima = proximasDelPaciente(consultas, p.id)[0]
+  const sinRegistrar = citasPendientesDeRegistro(consultas, p.id)
   const recetas = completadas.filter((c) => c.receta)
-  const h = p.historialInicial
 
   const atendidoPor = Object.values(completadas.reduce<Record<string, { e: Especialista; n: number; ultima: string }>>((acc, c) => {
     const a = acc[c.especialistaId]
@@ -274,7 +304,7 @@ export default function PacienteDetalle() {
             <div className="grid gap-6 lg:grid-cols-2">
               <Card className="p-5">
                 <p className="mb-3 text-sm font-bold text-ink-500">Padecimientos crónicos o actuales</p>
-                {h.padecimientos.length ? <Lista items={h.padecimientos} /> : <p className="text-sm text-ink-600">Ninguno reportado</p>}
+                {h.sinPadecimientos ? <Badge tone="brand">Sin padecimientos (confirmado por el paciente)</Badge> : <Lista items={h.padecimientos} />}
               </Card>
               <Card className="p-5">
                 <p className="mb-3 text-sm font-bold text-ink-500">Alergias</p>
@@ -282,7 +312,7 @@ export default function PacienteDetalle() {
               </Card>
               <Card className="p-5">
                 <p className="mb-3 text-sm font-bold text-ink-500">Tratamientos que ha seguido</p>
-                {h.tratamientos.length ? <Lista items={h.tratamientos} /> : <p className="text-sm text-ink-600">Ninguno reportado</p>}
+                {h.sinTratamientos ? <Badge tone="brand">Sin tratamientos previos (confirmado por el paciente)</Badge> : <Lista items={h.tratamientos} />}
               </Card>
               <Card className="p-5">
                 <p className="mb-3 text-sm font-bold text-ink-500">Cirugías u hospitalizaciones</p>
@@ -304,6 +334,11 @@ export default function PacienteDetalle() {
               <p className="text-sm text-ink-500">{cs.length} registros · ordenados cronológicamente</p>
               <Button variant="outline" size="sm" onClick={() => setAsc(!asc)}><ArrowDownUp className="size-4" /> {asc ? 'Más antiguas primero' : 'Más recientes primero'}</Button>
             </div>
+            {sinRegistrar.length > 0 && (
+              <p className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status"><AlertTriangle className="size-4.5 shrink-0 text-amber-600" />
+                {sinRegistrar.length === 1 ? 'Hay 1 cita pasada' : `Hay ${sinRegistrar.length} citas pasadas`} sin registrar como consulta realizada. Ábrela y registra su resultado.
+              </p>
+            )}
             {cs.length ? (
               <ol className="relative space-y-4 before:absolute before:bottom-4 before:left-3 before:top-4 before:w-px before:bg-ink-200 sm:before:left-4">
                 {ordenadas.map((c) => <ConsultaItem key={c.id} c={c} e={esp(c.especialistaId)} onReceta={setReceta} defaultOpen={c.id === completadas[0]?.id} />)}

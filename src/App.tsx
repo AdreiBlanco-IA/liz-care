@@ -20,12 +20,16 @@ import Tratamiento from './pages/portal/Tratamiento'
 import Landing from './pages/public/Landing'
 import Login from './pages/public/Login'
 import NotFound from './pages/public/NotFound'
+import Privacidad from './pages/public/Privacidad'
+import { puedeAbrirRuta, rutaInicial } from './modules/identidad/permisos'
 
 function RequireRol({ rol, children }: { rol: Rol; children: ReactNode }) {
   const { sesion } = useStore()
   const loc = useLocation()
-  if (!sesion) return <Navigate to={`/login?rol=${rol}`} replace state={{ from: loc.pathname }} />
-  if (sesion.rol !== rol) return <Navigate to={sesion.rol === 'admin' ? '/admin' : '/portal'} replace />
+  // M01 decide: sin sesión se pide iniciar sesión; con otro rol se vuelve a la zona propia (CA-09, CA-13).
+  const d = puedeAbrirRuta(sesion, loc.pathname)
+  if (!d.permitido && d.motivo === 'sin-sesion') return <Navigate to={`/login?rol=${rol}`} replace state={{ from: loc.pathname }} />
+  if (!d.permitido && sesion) return <Navigate to={rutaInicial(sesion.rol)} replace />
   return <>{children}</>
 }
 
@@ -43,6 +47,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/privacidad" element={<Privacidad />} />
         <Route path="/admin" element={<RequireRol rol="admin"><AdminLayout /></RequireRol>}>
           <Route index element={<Dashboard />} />
           <Route path="pacientes" element={<Pacientes />} />

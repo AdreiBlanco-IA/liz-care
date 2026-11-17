@@ -2,39 +2,32 @@ import { Building2, Languages, MapPin, Phone, Plus, Search, Stethoscope, X } fro
 import { useState, type FormEvent } from 'react'
 import { Avatar, Badge, Button, Card, EmptyState, Field, Input, PageHeader, Select, cx } from '../../components/ui'
 import type { Sector } from '../../data/types'
-import { normalizar } from '../../lib/format'
 import { useStore } from '../../lib/store'
+import { buscarEspecialistas, datosEspecialistaVacios, especialidadesDe, idiomasDe, type CampoEspecialista } from '../../modules/especialistas/catalogo'
 
-const vacio = { nombre: '', especialidad: '', institucion: '', sector: 'Privado' as Sector, direccion: '', telefono: '', idiomas: '' }
-type Form = typeof vacio
-const requeridos: (keyof Form)[] = ['nombre', 'especialidad', 'institucion', 'telefono', 'idiomas']
+type Form = typeof datosEspecialistaVacios
 
 function NuevoEspecialista({ especialidades, onClose }: { especialidades: string[]; onClose: () => void }) {
-  const { agregarEspecialista, notify } = useStore()
-  const [f, setF] = useState<Form>(vacio)
-  const [errores, setErrores] = useState<Partial<Record<keyof Form, string>>>({})
+  const { guardarEspecialista, reportarFallo, notify } = useStore()
+  const [f, setF] = useState<Form>(datosEspecialistaVacios)
+  const [errores, setErrores] = useState<Partial<Record<CampoEspecialista, string>>>({})
 
   const set = (k: keyof Form) => (e: { target: { value: string } }) => {
     setF((x) => ({ ...x, [k]: e.target.value }))
     if (errores[k]) setErrores((x) => ({ ...x, [k]: undefined }))
   }
 
-  const submit = (e: FormEvent) => {
+  // M11 valida y decide: sin nombre o sin especialidad no se agrega al catálogo (CA-16).
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    const errs: typeof errores = {}
-    requeridos.forEach((k) => { if (!f[k].trim()) errs[k] = 'Este campo es obligatorio.' })
-    setErrores(errs)
-    if (Object.keys(errs).length) return
-    const nuevo = agregarEspecialista({
-      nombre: f.nombre.trim(), especialidad: f.especialidad.trim(), institucion: f.institucion.trim(), sector: f.sector,
-      direccion: f.direccion.trim(), telefono: f.telefono.trim(),
-      idiomas: f.idiomas.split(',').map((x) => x.trim()).filter(Boolean),
-    })
-    notify(`${nuevo.nombre} se agregó al catálogo.`)
-    onClose()
+    const r = await guardarEspecialista(f)
+    if (r.ok) { notify(`${r.especialista.nombre} se agregó al catálogo.`); onClose(); return }
+    if (r.motivo === 'datos-invalidos') { setErrores(r.errores); return }
+    if (r.motivo === 'sin-permiso') { notify('Solo la administración puede registrar especialistas.', 'error'); return }
+    notify(`No se pudo guardar el especialista. Código ${reportarFallo('guardar especialista')}.`, 'error')
   }
 
-  const inv = (k: keyof Form) => ({ invalid: !!errores[k], 'aria-invalid': !!errores[k] })
+  const inv = (k: CampoEspecialista) => ({ invalid: !!errores[k], 'aria-invalid': !!errores[k] })
 
   return (
     <Card className="mb-6 animate-fade-up p-5 sm:p-6">
@@ -78,12 +71,11 @@ export default function Especialistas() {
   const [idioma, setIdioma] = useState('')
   const [sector, setSector] = useState<'' | Sector>('')
   const [nuevo, setNuevo] = useState(false)
-  const especialidades = Array.from(new Set(especialistas.map((e) => e.especialidad))).sort()
-  const idiomas = Array.from(new Set(especialistas.flatMap((e) => e.idiomas))).sort()
+  const especialidades = especialidadesDe(especialistas)
+  const idiomas = idiomasDe(especialistas)
 
-  const lista = especialistas.filter((e) =>
-    (!esp || e.especialidad === esp) && (!sector || e.sector === sector) && (!idioma || e.idiomas.includes(idioma)) &&
-    (!q || normalizar(`${e.nombre} ${e.especialidad} ${e.institucion}`).includes(normalizar(q))))
+  // M11: la búsqueda por especialidad e idioma exige ambas coincidencias; sin resultados no se sugiere a nadie.
+  const lista = buscarEspecialistas(especialistas, { especialidad: esp, idioma, texto: q }).filter((e) => !sector || e.sector === sector)
 
   const stats = (id: string) => {
     const cs = consultas.filter((c) => c.especialistaId === id && c.estado === 'completada')
@@ -118,7 +110,7 @@ export default function Especialistas() {
         </div>
       </Card>
 
-      {lista.length === 0 ? <Card><EmptyState icon={<Stethoscope className="size-6" />} title="Sin resultados" text="Ningún especialista cumple los filtros seleccionados." /></Card> : (
+      {lista.length === 0 ? <Card><EmptyState icon={<Stethoscope className="size-6" />} title="Sin resultados" text={esp || idioma || q || sector ? 'Ningún especialista cumple los filtros seleccionados. Prueba quitar alguno.' : 'Aún no hay especialistas en el catálogo.'} /></Card> : (
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {lista.map((e) => {
             const s = stats(e.id)

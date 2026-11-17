@@ -434,7 +434,7 @@ function Footer() {
         <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
           <a href="#servicios" className="hover:text-white">Servicios</a>
           <Link to="/login?rol=paciente" className="hover:text-white">Portal del paciente</Link>
-          <a href="#contacto" className="hover:text-white">Aviso de privacidad</a>
+          <Link to="/privacidad" className="hover:text-white">Aviso de privacidad</Link>
         </div>
       </div>
       <div className="border-t border-white/10">

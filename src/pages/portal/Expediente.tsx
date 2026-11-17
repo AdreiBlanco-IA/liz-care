@@ -82,8 +82,8 @@ export default function Expediente() {
                   <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink-500">{!h.sinAlergias && <AlertTriangle className="size-4 text-red-500" />}{t('exp.alergias')}</p>
                   {h.sinAlergias ? <p className="text-sm font-semibold text-brand-700">{t('exp.sinAlergias')}</p> : <Chips items={h.alergias} red />}
                 </div>
-                <div><p className="mb-2 text-sm font-bold text-ink-500">{t('exp.padecimientos')}</p>{h.padecimientos.length ? <Chips items={h.padecimientos} /> : <p className="text-sm">—</p>}</div>
-                <div><p className="mb-2 text-sm font-bold text-ink-500">{t('exp.tratamientosPrev')}</p>{h.tratamientos.length ? <Chips items={h.tratamientos} /> : <p className="text-sm">—</p>}</div>
+                <div><p className="mb-2 text-sm font-bold text-ink-500">{t('exp.padecimientos')}</p>{h.sinPadecimientos ? <p className="text-sm font-semibold text-brand-700">{t('exp.sinPadecimientos')}</p> : <Chips items={h.padecimientos} />}</div>
+                <div><p className="mb-2 text-sm font-bold text-ink-500">{t('exp.tratamientosPrev')}</p>{h.sinTratamientos ? <p className="text-sm font-semibold text-brand-700">{t('exp.sinTratamientos')}</p> : <Chips items={h.tratamientos} />}</div>
                 {h.cirugias && <div><p className="mb-2 text-sm font-bold text-ink-500">{t('exp.cirugias')}</p><p className="text-sm text-ink-700">{h.cirugias}</p></div>}
               </div>
             ) : (

@@ -4,13 +4,14 @@ import { Lightbox } from '../../components/Lightbox'
 import { Avatar, Badge, Card, cx } from '../../components/ui'
 import type { Medicamento } from '../../data/types'
 import { fechaLarga, hora } from '../../lib/format'
+import { entregarReceta } from '../../modules/recetas/archivo'
 import { useI18n } from '../../lib/i18n'
 import { usePaciente } from '../../lib/usePaciente'
 import { HorarioChips, horarioMeta } from './Inicio'
 
 export default function Tratamiento() {
   const { t, lang } = useI18n()
-  const { ultima, esp } = usePaciente()
+  const { ultima, esp, sesion } = usePaciente()
   const [zoom, setZoom] = useState(false)
 
   if (!ultima) {
@@ -18,6 +19,9 @@ export default function Tratamiento() {
   }
   const e = esp(ultima.especialistaId)
   const tr = ultima.tratamiento
+  // M06: la foto solo se entrega al paciente dueño de la consulta.
+  const receta = entregarReceta(sesion, ultima)
+  const fotoReceta = receta.ok ? receta.receta.url : undefined
   const porHorario = (h: Medicamento['horarios'][number]) => tr?.medicamentos.filter((m) => m.horarios.includes(h)) ?? []
 
   return (
@@ -43,6 +47,7 @@ export default function Tratamiento() {
 
           {tr ? (
             <>
+              {tr.sinMedicamentos && <Card className="p-6 text-center text-sm font-semibold text-ink-600"><Pill className="mx-auto mb-2 size-7 text-ink-300" />{t('trat.sinMeds')}</Card>}
               <div className="space-y-3">
                 {tr.medicamentos.map((m, i) => (
                   <Card key={i} className="overflow-hidden">
@@ -76,7 +81,7 @@ export default function Tratamiento() {
         </div>
 
         <div className="space-y-6">
-          {tr && (
+          {tr && tr.medicamentos.length > 0 && (
             <Card className="p-5">
               <p className="mb-4 font-bold">{t('trat.horario')}</p>
               <div className="space-y-3">
@@ -97,14 +102,14 @@ export default function Tratamiento() {
             </Card>
           )}
 
-          {ultima.receta && (
+          {fotoReceta && (
             <Card className="overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4">
                 <p className="font-bold">{t('trat.receta')}</p>
                 <span className="text-xs text-ink-400">{t('trat.ampliar')}</span>
               </div>
               <button onClick={() => setZoom(true)} className="group relative block w-full">
-                <img src={ultima.receta.url} alt={t('trat.receta')} className="h-80 w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]" />
+                <img src={fotoReceta} alt={t('trat.receta')} className="h-80 w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]" />
                 <span className="absolute bottom-3 right-3 grid size-10 place-items-center rounded-full bg-ink-900/70 text-white backdrop-blur"><Expand className="size-4.5" /></span>
               </button>
             </Card>
@@ -112,7 +117,7 @@ export default function Tratamiento() {
         </div>
       </div>
 
-      {zoom && ultima.receta && <Lightbox src={ultima.receta.url} alt={t('trat.receta')} onClose={() => setZoom(false)} />}
+      {zoom && fotoReceta && <Lightbox src={fotoReceta} alt={t('trat.receta')} onClose={() => setZoom(false)} />}
     </div>
   )
 }

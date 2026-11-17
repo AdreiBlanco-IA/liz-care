@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Avatar, Badge, ButtonLink, Card, EmptyState, PageHeader, cx } from '../../components/ui'
 import type { Paciente } from '../../data/types'
-import { edad, fechaCorta, nombreCompleto, normalizar, porFechaAsc, porFechaDesc } from '../../lib/format'
+import { edad, fechaCorta, nombreCompleto, normalizar } from '../../lib/format'
 import { useStore } from '../../lib/store'
+import { proximasDelPaciente, realizadasDelPaciente } from '../../modules/citas/atenciones'
 
 type Filtro = 'todos' | 'activos' | 'pendiente' | 'inactivos'
 
@@ -23,10 +24,9 @@ export default function Pacientes() {
   const info = useMemo(() => {
     const ahora = new Date()
     return Object.fromEntries(pacientes.map((p) => {
-      const cs = consultas.filter((c) => c.pacienteId === p.id)
-      const proxima = cs.filter((c) => c.estado === 'programada' && new Date(c.fecha) >= ahora).sort(porFechaAsc)[0]
-      const ultima = cs.filter((c) => c.estado === 'completada').sort(porFechaDesc)[0]
-      return [p.id, { proxima, ultima, total: cs.filter((c) => c.estado === 'completada').length }]
+      const proxima = proximasDelPaciente(consultas, p.id, ahora)[0]
+      const realizadas = realizadasDelPaciente(consultas, p.id)
+      return [p.id, { proxima, ultima: realizadas[0], total: realizadas.length }]
     }))
   }, [pacientes, consultas])
 
