@@ -71,7 +71,7 @@ function ConsultaItem({ c, e, onReceta, defaultOpen }: { c: Consulta; e: Especia
               <p className="font-bold">{c.motivo}</p>
               {futura ? <Badge tone="blue">Programada</Badge> : <Badge tone="brand">Completada</Badge>}
               {c.tratamiento && <Badge tone="violet" icon={<Pill className="size-3" />}>{c.tratamiento.medicamentos.length}</Badge>}
-              {c.recetaFoto && <Badge tone="gray" icon={<FileImage className="size-3" />}>Receta</Badge>}
+              {c.receta && <Badge tone="gray" icon={<FileImage className="size-3" />}>Receta</Badge>}
             </div>
             <p className="mt-1 truncate text-sm text-ink-500">
               <span className="sm:hidden">{fechaCorta(c.fecha)} · </span>{hora(c.fecha)} · {e.nombre} · {e.especialidad}
@@ -91,9 +91,9 @@ function ConsultaItem({ c, e, onReceta, defaultOpen }: { c: Consulta; e: Especia
                   <Badge tone={e.sector === 'Público' ? 'blue' : 'violet'}>Sector {e.sector.toLowerCase()}</Badge>
                 </div>
               </div>
-              {c.recetaFoto && (
-                <button onClick={() => onReceta(c.recetaFoto!)} className="group relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-ink-100 lg:w-36">
-                  <img src={c.recetaFoto} alt="Foto de la receta" className="size-full object-cover object-top transition group-hover:scale-105" />
+              {c.receta && (
+                <button onClick={() => onReceta(c.receta!.url)} className="group relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-ink-100 lg:w-36">
+                  <img src={c.receta.url} alt="Foto de la receta" className="size-full object-cover object-top transition group-hover:scale-105" />
                   <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/80 to-transparent p-2 text-xs font-semibold text-white">Ver receta</span>
                 </button>
               )}
@@ -146,7 +146,7 @@ export default function PacienteDetalle() {
   const ordenadas = [...cs].sort(asc ? porFechaAsc : porFechaDesc)
   const completadas = cs.filter((c) => c.estado === 'completada').sort(porFechaDesc)
   const proxima = cs.filter((c) => c.estado === 'programada' && new Date(c.fecha) >= new Date()).sort(porFechaAsc)[0]
-  const recetas = completadas.filter((c) => c.recetaFoto)
+  const recetas = completadas.filter((c) => c.receta)
   const h = p.historialInicial
 
   const atendidoPor = Object.values(completadas.reduce<Record<string, { e: Especialista; n: number; ultima: string }>>((acc, c) => {
@@ -316,8 +316,8 @@ export default function PacienteDetalle() {
           recetas.length ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {recetas.map((c) => (
-                <button key={c.id} onClick={() => setReceta(c.recetaFoto!)} className="group overflow-hidden rounded-2xl border border-ink-100 bg-white text-left shadow-card transition hover:shadow-float">
-                  <div className="h-48 overflow-hidden"><img src={c.recetaFoto} alt="" className="size-full object-cover object-top transition duration-300 group-hover:scale-105" /></div>
+                <button key={c.id} onClick={() => setReceta(c.receta!.url)} className="group overflow-hidden rounded-2xl border border-ink-100 bg-white text-left shadow-card transition hover:shadow-float">
+                  <div className="h-48 overflow-hidden"><img src={c.receta!.url} alt="" className="size-full object-cover object-top transition duration-300 group-hover:scale-105" /></div>
                   <div className="p-4">
                     <p className="font-bold">{esp(c.especialistaId).especialidad}</p>
                     <p className="text-sm text-ink-500">{fechaCorta(c.fecha)} · {c.tratamiento?.medicamentos.length ?? 0} medicamentos</p>

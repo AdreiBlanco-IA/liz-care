@@ -3,7 +3,7 @@ import { ArrowLeft, Camera, Check, ClipboardList, Eye, ImagePlus, Lock, Moon, Pi
 import { useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Avatar, Badge, Button, ButtonLink, Card, Field, Input, PageHeader, Select, Textarea, Toggle, cx } from '../../components/ui'
-import type { EstadoConsulta, Medicamento } from '../../data/types'
+import type { ArchivoReceta, EstadoConsulta, Medicamento } from '../../data/types'
 import { fechaLarga, nombreCompleto, normalizar } from '../../lib/format'
 import { useStore } from '../../lib/store'
 
@@ -46,7 +46,7 @@ export default function NuevaConsulta() {
   const [trad, setTrad] = useState(() => citaPrevia?.traduccion ?? pacientes.find((p) => p.id === params.get('paciente'))?.idioma !== 'Español')
   const [meds, setMeds] = useState<Medicamento[]>([medVacio()])
   const [indGen, setIndGen] = useState('')
-  const [receta, setReceta] = useState<string | null>(null)
+  const [receta, setReceta] = useState<ArchivoReceta | null>(null)
   const [arrastrando, setArrastrando] = useState(false)
   const [notaVisible, setNotaVisible] = useState('')
   const [notaInterna, setNotaInterna] = useState('')
@@ -68,7 +68,7 @@ export default function NuevaConsulta() {
     if (!f) return
     if (!f.type.startsWith('image/')) { notify('Solo se permiten imágenes (JPG, PNG, HEIC).', 'error'); return }
     if (f.size > 10 * 1024 * 1024) { notify('La imagen supera 10 MB.', 'error'); return }
-    setReceta(URL.createObjectURL(f))
+    setReceta({ url: URL.createObjectURL(f), nombreOriginal: f.name, tipoMime: f.type, tamanoBytes: f.size })
   }
 
   const submit = (e: FormEvent) => {
@@ -96,7 +96,7 @@ export default function NuevaConsulta() {
       acompanamiento: acomp, traduccion: trad,
       notaVisible: notaVisible.trim() || undefined, notaInterna: notaInterna.trim() || undefined,
       tratamiento: completada && medsLlenos.length ? { medicamentos: medsLlenos, indicacionesGenerales: indGen.trim() } : undefined,
-      recetaFoto: completada ? receta ?? undefined : undefined,
+      receta: completada ? receta ?? undefined : undefined,
     }
     if (citaPrevia) actualizarConsulta({ ...citaPrevia, ...datos })
     else agregarConsulta(datos)
@@ -234,7 +234,7 @@ export default function NuevaConsulta() {
                 {receta ? (
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                     <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-ink-100 sm:w-44">
-                      <img src={receta} alt="Vista previa de la receta" className="size-full object-cover object-top" />
+                      <img src={receta.url} alt="Vista previa de la receta" className="size-full object-cover object-top" />
                       <button type="button" onClick={() => setReceta(null)} className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-ink-900/70 text-white hover:bg-ink-900" aria-label="Quitar foto"><X className="size-4" /></button>
                     </div>
                     <div>
@@ -254,7 +254,7 @@ export default function NuevaConsulta() {
                     <p className="text-sm text-ink-500">JPG, PNG o HEIC · máximo 10 MB</p>
                     <div className="mt-5 flex flex-wrap justify-center gap-2">
                       <Button type="button" size="sm" onClick={() => fileRef.current?.click()}><Camera className="size-4" /> Tomar o elegir foto</Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setReceta(asset('images/receta-ejemplo.svg')); notify('Se cargó una receta de ejemplo.') }}>Usar receta de ejemplo</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setReceta({ url: asset('images/receta-ejemplo.png'), nombreOriginal: 'receta-ejemplo.png', tipoMime: 'image/png', tamanoBytes: 629556 }); notify('Se cargó una receta de ejemplo.') }}>Usar receta de ejemplo</Button>
                     </div>
                   </div>
                 )}
@@ -300,7 +300,7 @@ export default function NuevaConsulta() {
                 </div>
               )}
               {notaVisible && <p className="rounded-xl bg-brand-50 p-3 text-sm text-ink-700">{notaVisible}</p>}
-              {receta && <img src={receta} alt="" className="h-28 w-full rounded-xl object-cover object-top" />}
+              {receta && <img src={receta.url} alt="" className="h-28 w-full rounded-xl object-cover object-top" />}
               <p className="flex items-center gap-1.5 text-xs text-ink-400"><Lock className="size-3.5" /> Las notas internas nunca se muestran al paciente.</p>
             </div>
             <div className="grid gap-2 border-t border-ink-100 p-4">

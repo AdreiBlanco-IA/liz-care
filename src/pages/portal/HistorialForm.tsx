@@ -114,7 +114,9 @@ export default function HistorialForm() {
     guardarHistorial(paciente.id, {
       completadoEl: new Date().toISOString(),
       padecimientos: sinPad ? [] : pad,
+      sinPadecimientos: sinPad,
       sinAlergias: tieneAlergias === false,
+      sinTratamientos: sinTrat,
       alergias: tieneAlergias ? alergias : [],
       tratamientos: sinTrat ? [] : trat,
       cirugias: cirugias.trim() || undefined,

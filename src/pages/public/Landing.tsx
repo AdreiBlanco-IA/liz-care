@@ -234,7 +234,7 @@ function PhoneMock() {
             ))}
           </div>
           <div className="overflow-hidden rounded-2xl bg-white shadow-card">
-            <img src={asset('images/receta-ejemplo.svg')} alt="" className="h-20 w-full object-cover object-top" />
+            <img src={asset('images/receta-ejemplo.png')} alt="" className="h-20 w-full object-cover object-top" />
             <p className="px-3 py-2 text-[10px] font-bold">Prescription photo</p>
           </div>
         </div>

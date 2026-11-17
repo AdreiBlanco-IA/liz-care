@@ -24,12 +24,18 @@ export interface ContactoEmergencia {
   telefono: string
 }
 
+/**
+ * RF-10 / CA-08: cada apartado se responde con elementos o con un «no tengo» explícito.
+ * Una lista vacía sin la marca «no tengo» nunca equivale a ninguno.
+ */
 export interface HistorialInicial {
   completadoEl: string
   padecimientos: string[]
-  sinAlergias: boolean
+  sinPadecimientos: boolean
   alergias: string[]
+  sinAlergias: boolean
   tratamientos: string[]
+  sinTratamientos: boolean
   cirugias?: string
   notas?: string
 }
@@ -66,10 +72,21 @@ export interface Medicamento {
 
 export interface Tratamiento {
   medicamentos: Medicamento[]
+  /** RF-08 / CA-05: la ausencia de medicamentos se indica expresamente; no se deduce de una lista vacía. */
+  sinMedicamentos?: boolean
   indicacionesGenerales: string
 }
 
-export type EstadoConsulta = 'programada' | 'completada' | 'cancelada'
+/** Metadatos de la foto de receta (tabla archivo_receta). `url` es una referencia de visualización, no un enlace público. */
+export interface ArchivoReceta {
+  url: string
+  nombreOriginal: string
+  tipoMime: string
+  tamanoBytes: number
+}
+
+/** v4: una atención es una cita programada o una consulta realizada. */
+export type EstadoConsulta = 'programada' | 'completada'
 
 export interface Consulta {
   id: string
@@ -82,7 +99,7 @@ export interface Consulta {
   notaInterna?: string
   estado: EstadoConsulta
   tratamiento?: Tratamiento
-  recetaFoto?: string
+  receta?: ArchivoReceta
   acompanamiento: boolean
   traduccion: boolean
 }
@@ -94,4 +111,6 @@ export interface Sesion {
   nombre: string
   email: string
   pacienteId?: string
+  /** Momento de inicio; la sesión expira pasado el límite de M01. */
+  iniciadaEl?: string
 }

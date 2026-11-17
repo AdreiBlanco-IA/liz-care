@@ -40,7 +40,7 @@ export default function Citas() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-bold">{c.motivo}</p>
                     {c.tratamiento && <Badge tone="violet" icon={<Pill className="size-3" />}>{c.tratamiento.medicamentos.length}</Badge>}
-                    {c.recetaFoto && <Badge tone="gray" icon={<FileImage className="size-3" />}>Rx</Badge>}
+                    {c.receta && <Badge tone="gray" icon={<FileImage className="size-3" />}>Rx</Badge>}
                   </div>
                   <p className="text-sm text-ink-500">{e.nombre} · {e.especialidad}</p>
                   <p className="text-sm text-ink-400">{fechaLarga(c.fecha, lang)} · {hora(c.fecha, lang)}</p>

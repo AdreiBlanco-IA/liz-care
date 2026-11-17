@@ -1,5 +1,5 @@
 import { asset } from '../lib/asset'
-import type { Administrador, Consulta, Especialista, Paciente } from './types'
+import type { Administrador, ArchivoReceta, Consulta, Especialista, Paciente } from './types'
 
 function at(offsetDays: number, hhmm = '10:00'): string {
   const [h, m] = hhmm.split(':').map(Number)
@@ -7,6 +7,11 @@ function at(offsetDays: number, hhmm = '10:00'): string {
   d.setDate(d.getDate() + offsetDays)
   d.setHours(h, m, 0, 0)
   return d.toISOString()
+}
+
+/** Receta precargada de demostración (PNG de ejemplo con la marca «EJEMPLO»). */
+const recetaEjemplo: ArchivoReceta = {
+  url: asset('images/receta-ejemplo.png'), nombreOriginal: 'receta-ejemplo.png', tipoMime: 'image/png', tamanoBytes: 629556,
 }
 
 export const administradores: Administrador[] = [
@@ -60,7 +65,7 @@ export const pacientesIniciales: Paciente[] = [
     contactoEmergencia: { nombre: 'David Carter', parentesco: 'Esposo', telefono: '+1 512 555 0199' },
     historialInicial: {
       completadoEl: at(-118), padecimientos: ['Hipertensión arterial (desde 2019)', 'Migraña ocasional'],
-      sinAlergias: false, alergias: ['Penicilina', 'Mariscos'],
+      sinPadecimientos: false, sinAlergias: false, alergias: ['Penicilina', 'Mariscos'], sinTratamientos: false,
       tratamientos: ['Enalapril 10 mg (2019–2024)', 'Sumatriptán 50 mg según necesidad'],
       cirugias: 'Apendicectomía (2008)',
     },
@@ -77,7 +82,7 @@ export const pacientesIniciales: Paciente[] = [
     padecimientoPrincipal: 'Control prenatal', altaEl: at(-60), activo: true, portal: 'activo', color: '#d1497b',
     contactoEmergencia: { nombre: 'Julien Laurent', parentesco: 'Pareja', telefono: '+33 6 98 76 54 32' },
     historialInicial: {
-      completadoEl: at(-58), padecimientos: ['Hipotiroidismo'], sinAlergias: true, alergias: [],
+      completadoEl: at(-58), padecimientos: ['Hipotiroidismo'], sinPadecimientos: false, sinAlergias: true, alergias: [], sinTratamientos: false,
       tratamientos: ['Levotiroxina 50 mcg diaria'],
     },
   },
@@ -87,7 +92,7 @@ export const pacientesIniciales: Paciente[] = [
     padecimientoPrincipal: 'Diabetes tipo 2', altaEl: at(-200), activo: true, portal: 'activo', color: '#e0812b',
     contactoEmergencia: { nombre: 'Yuki Tanaka', parentesco: 'Esposa', telefono: '+81 90 8765 4321' },
     historialInicial: {
-      completadoEl: at(-198), padecimientos: ['Diabetes tipo 2 (desde 2016)'], sinAlergias: false, alergias: ['Sulfas'],
+      completadoEl: at(-198), padecimientos: ['Diabetes tipo 2 (desde 2016)'], sinPadecimientos: false, sinAlergias: false, alergias: ['Sulfas'], sinTratamientos: false,
       tratamientos: ['Metformina 850 mg dos veces al día'],
     },
   },
@@ -103,7 +108,7 @@ export const pacientesIniciales: Paciente[] = [
     padecimientoPrincipal: 'Dermatitis atópica', altaEl: at(-45), activo: true, portal: 'activo', color: '#0f8fb3',
     contactoEmergencia: { nombre: 'Ricardo Gómez', parentesco: 'Hermano', telefono: '+52 477 555 0111' },
     historialInicial: {
-      completadoEl: at(-44), padecimientos: ['Dermatitis atópica', 'Asma leve'], sinAlergias: false, alergias: ['Ácaros', 'Níquel'],
+      completadoEl: at(-44), padecimientos: ['Dermatitis atópica', 'Asma leve'], sinPadecimientos: false, sinAlergias: false, alergias: ['Ácaros', 'Níquel'], sinTratamientos: false,
       tratamientos: ['Salbutamol inhalado según necesidad'],
     },
   },
@@ -119,7 +124,7 @@ export const pacientesIniciales: Paciente[] = [
     padecimientoPrincipal: 'Artrosis de cadera', altaEl: at(-310), activo: false, portal: 'sin acceso', color: '#a0703c',
     contactoEmergencia: { nombre: 'George Smith', parentesco: 'Hijo', telefono: '+44 7700 900456' },
     historialInicial: {
-      completadoEl: at(-305), padecimientos: ['Artrosis de cadera', 'Osteoporosis'], sinAlergias: true, alergias: [],
+      completadoEl: at(-305), padecimientos: ['Artrosis de cadera', 'Osteoporosis'], sinPadecimientos: false, sinAlergias: true, alergias: [], sinTratamientos: false,
       tratamientos: ['Alendronato 70 mg semanal', 'Paracetamol 500 mg según dolor'],
     },
   },
@@ -144,7 +149,7 @@ export const consultasIniciales: Consulta[] = [
       ],
       indicacionesGenerales: 'Reducir sal, caminar 30 minutos diarios y evitar el alcohol.',
     },
-    recetaFoto: asset('images/receta-ejemplo.svg'),
+    receta: recetaEjemplo,
   },
   {
     id: 'c3', pacienteId: 'p1', especialistaId: 'e2', fecha: at(-35, '16:30'), estado: 'completada',
@@ -166,7 +171,7 @@ export const consultasIniciales: Consulta[] = [
       ],
       indicacionesGenerales: 'Dieta baja en sodio y grasas saturadas. Volver a medir colesterol en 3 meses. Acudir a urgencias si presenta dolor de pecho o presión mayor a 160/100.',
     },
-    recetaFoto: asset('images/receta-ejemplo.svg'),
+    receta: recetaEjemplo,
   },
   {
     id: 'c5', pacienteId: 'p1', especialistaId: 'e5', fecha: at(6, '12:00'), estado: 'programada',
@@ -196,7 +201,7 @@ export const consultasIniciales: Consulta[] = [
       ],
       indicacionesGenerales: 'Hidratación abundante y reposo relativo.',
     },
-    recetaFoto: asset('images/receta-ejemplo.svg'),
+    receta: recetaEjemplo,
   },
   {
     id: 'c10', pacienteId: 'p4', especialistaId: 'e5', fecha: at(0, '17:30'), estado: 'programada',

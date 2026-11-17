@@ -97,14 +97,14 @@ export default function Tratamiento() {
             </Card>
           )}
 
-          {ultima.recetaFoto && (
+          {ultima.receta && (
             <Card className="overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4">
                 <p className="font-bold">{t('trat.receta')}</p>
                 <span className="text-xs text-ink-400">{t('trat.ampliar')}</span>
               </div>
               <button onClick={() => setZoom(true)} className="group relative block w-full">
-                <img src={ultima.recetaFoto} alt={t('trat.receta')} className="h-80 w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]" />
+                <img src={ultima.receta.url} alt={t('trat.receta')} className="h-80 w-full object-cover object-top transition duration-300 group-hover:scale-[1.02]" />
                 <span className="absolute bottom-3 right-3 grid size-10 place-items-center rounded-full bg-ink-900/70 text-white backdrop-blur"><Expand className="size-4.5" /></span>
               </button>
             </Card>
@@ -112,7 +112,7 @@ export default function Tratamiento() {
         </div>
       </div>
 
-      {zoom && ultima.recetaFoto && <Lightbox src={ultima.recetaFoto} alt={t('trat.receta')} onClose={() => setZoom(false)} />}
+      {zoom && ultima.receta && <Lightbox src={ultima.receta.url} alt={t('trat.receta')} onClose={() => setZoom(false)} />}
     </div>
   )
 }

@@ -22,7 +22,7 @@ export default function Agenda() {
   const [diaSel, setDiaSel] = useState(() => new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()))
 
   const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(semana); d.setDate(d.getDate() + i); return d }), [semana])
-  const visibles = consultas.filter((c) => c.estado !== 'cancelada')
+  const visibles = consultas
   const deDia = (d: Date) => visibles.filter((c) => mismoDia(new Date(c.fecha), d)).sort(porFechaAsc)
   const pac = (id: string) => pacientes.find((p) => p.id === id)!
   const esp = (id: string) => especialistas.find((e) => e.id === id)!
