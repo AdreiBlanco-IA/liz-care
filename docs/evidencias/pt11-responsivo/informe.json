@@ -1,0 +1,380 @@
+[
+  {
+    "ancho": 360,
+    "ruta": "/",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Tu salud en México,acompañada en cada paso.",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/login",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 3,
+    "titulo": "Bienvenido de nuevo",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/privacidad",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Aviso de privacidad y datos que guardamos",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/admin",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Buenos días, Liz",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/admin/pacientes",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Pacientes",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/admin/pacientes/nuevo",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Registrar paciente",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/admin/pacientes/p1?tab=consultas",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Emily Carter",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/admin/consultas/nueva?paciente=p1",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Registrar consulta",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/admin/agenda",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Agenda",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/admin/especialistas",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 3,
+    "titulo": "Especialistas",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/portal",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 4,
+    "titulo": "Emily",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/portal/citas",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 4,
+    "titulo": "Mis citas",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/portal/tratamiento",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 2,
+    "titulo": "Tratamiento de tu última consulta",
+    "desborda": false
+  },
+  {
+    "ancho": 360,
+    "ruta": "/portal/expediente",
+    "scrollWidth": 360,
+    "fuera": [],
+    "controlesPequenos": 2,
+    "titulo": "Mi expediente",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Tu salud en México,acompañada en cada paso.",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/login",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 3,
+    "titulo": "Bienvenido de nuevo",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/privacidad",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Aviso de privacidad y datos que guardamos",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/admin",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Buenos días, Liz",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/admin/pacientes",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Pacientes",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/admin/pacientes/nuevo",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Registrar paciente",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/admin/pacientes/p1?tab=consultas",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Emily Carter",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/admin/consultas/nueva?paciente=p1",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Registrar consulta",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/admin/agenda",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Agenda",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/admin/especialistas",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 3,
+    "titulo": "Especialistas",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/portal",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 4,
+    "titulo": "Emily",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/portal/citas",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 4,
+    "titulo": "Mis citas",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/portal/tratamiento",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 2,
+    "titulo": "Tratamiento de tu última consulta",
+    "desborda": false
+  },
+  {
+    "ancho": 390,
+    "ruta": "/portal/expediente",
+    "scrollWidth": 390,
+    "fuera": [],
+    "controlesPequenos": 2,
+    "titulo": "Mi expediente",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Tu salud en México,acompañada en cada paso.",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/login",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 3,
+    "titulo": "Bienvenido de nuevo",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/privacidad",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Aviso de privacidad y datos que guardamos",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/admin",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Buenos días, Liz",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/admin/pacientes",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 7,
+    "titulo": "Pacientes",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/admin/pacientes/nuevo",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Registrar paciente",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/admin/pacientes/p1?tab=consultas",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Emily Carter",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/admin/consultas/nueva?paciente=p1",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 1,
+    "titulo": "Registrar consulta",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/admin/agenda",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Agenda",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/admin/especialistas",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 0,
+    "titulo": "Especialistas",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/portal",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 4,
+    "titulo": "Emily",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/portal/citas",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 4,
+    "titulo": "Mis citas",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/portal/tratamiento",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 2,
+    "titulo": "Tratamiento de tu última consulta",
+    "desborda": false
+  },
+  {
+    "ancho": 1440,
+    "ruta": "/portal/expediente",
+    "scrollWidth": 1440,
+    "fuera": [],
+    "controlesPequenos": 2,
+    "titulo": "Mi expediente",
+    "desborda": false
+  }
+]

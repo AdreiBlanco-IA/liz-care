@@ -23,7 +23,7 @@ export default function PortalLayout() {
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-20 border-b border-ink-100 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
           <Logo to="/portal" sub={t('nav.portal')} />
           <nav className="hidden flex-1 items-center gap-1 md:flex">
             {items.map(({ to, label, icon: Icon, end }) => (
@@ -35,7 +35,7 @@ export default function PortalLayout() {
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <LangToggle />
             {p && <div className="hidden sm:block"><Avatar name={sesion!.nombre} color={p.color} size={36} /></div>}
             <button onClick={salir} className="grid size-10 place-items-center rounded-full text-ink-500 hover:bg-ink-100 hover:text-ink-900" title={t('nav.salir')} aria-label={t('nav.salir')}>
