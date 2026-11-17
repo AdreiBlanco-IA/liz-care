@@ -22,14 +22,35 @@ Abre http://localhost:5173
 npm test
 ```
 
-## Módulos implementados
+138 pruebas automatizadas (una por grupo PT de la matriz v4 y un recorrido integrado). La trazabilidad completa
+RF → módulo → código → prueba está en [`docs/TRAZABILIDAD.md`](docs/TRAZABILIDAD.md).
+La auditoría responsiva (PT11) se corre con `node tools/auditoria-responsiva.mjs http://127.0.0.1:5173 <carpeta>` con la app en marcha.
 
-| Módulo | Requerimiento | Código | Pruebas y evidencia |
+## Módulos implementados (`src/modules/`)
+
+| Módulo | Requerimiento | Código | Pruebas |
 | --- | --- | --- | --- |
-| M02 Pacientes: alta | RF-01, HU-01, CA-01, CA-13 | `src/modules/pacientes/` | `tests/pacientes.test.ts`, `docs/evidencias/m02-alta-pacientes/` |
+| M01 Identidad y permisos | RF-04, RNF-02 | `identidad/` | `tests/identidad.test.ts` |
+| M02 Pacientes | RF-01 | `pacientes/` | `tests/pacientes.test.ts` |
+| M03 Historial inicial | RF-10 | `historial-inicial/` | `tests/historial.test.ts` |
+| M04 Citas y consultas | RF-02, RF-05 | `citas/` | `tests/citas.test.ts` |
+| M05 Tratamientos | RF-08, RF-09 | `tratamientos/` | `tests/tratamientos.test.ts` |
+| M06 Recetas y archivos | RF-07 | `recetas/` | `tests/recetas.test.ts` |
+| M07 Expedientes | RF-03, RF-06 | `expedientes/` | `tests/expedientes.test.ts` |
+| M10 Protección de datos | RNF-03 | `privacidad/` | `tests/privacidad.test.ts` |
+| M11 Especialistas | RF-11 | `especialistas/` | `tests/especialistas.test.ts` |
 
-Regla de duplicados: un correo ya registrado (sin distinguir mayúsculas ni espacios) bloquea el alta; mismo nombre y
+M08 (portal) y M09 (interfaz adaptable) son transversales de la interfaz (`src/pages/portal/`, `src/components/`).
+Cada módulo es TypeScript puro: recibe la sesión y una función `guardar`, así la persistencia (memoria hoy, Supabase después) se cambia sin tocar las reglas.
+
+Regla de duplicados (M02): un correo ya registrado (sin distinguir mayúsculas ni espacios) bloquea el alta; mismo nombre y
 fecha de nacimiento solo muestra una advertencia que la administradora puede confirmar.
+
+## Supabase (en pausa)
+
+Por ahora la app corre con datos en memoria (se reinician al recargar). Para activar Supabase: copia `.env.example` a `.env.local`,
+llena la URL y la llave, y pon `VITE_SUPABASE_ACTIVO=true`. Con la bandera activa, el acceso de administración y el alta de pacientes usan la base.
+El aviso de privacidad del prototipo está en `/privacidad`.
 
 ## Cuentas de demostración
 
