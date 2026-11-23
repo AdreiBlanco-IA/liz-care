@@ -1,10 +1,12 @@
 import {
   AlertTriangle, ArrowDownUp, RotateCcw, ArrowLeft, CalendarDays, Cake, ChevronDown, ClipboardList, Eye, FileImage, Globe2, Languages, Lock,
-  Mail, Phone, Pill, Plus, Send, ShieldAlert, Stethoscope, UserRound,
+  KeyRound, Mail, Phone, Pill, Plus, Send, ShieldAlert, Stethoscope, UserRound,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Lightbox } from '../../components/Lightbox'
+import { supabase } from '../../data/supabase'
+import { AccesoPortalModal } from './AccesoPortal'
 import { Avatar, Badge, Button, ButtonLink, Card, CardHeader, DoctorChip, EmptyState, Tabs, cx } from '../../components/ui'
 import type { Consulta, Especialista } from '../../data/types'
 import { diaMes, edad, fechaCorta, fechaLarga, hora, nombreCompleto, relativo } from '../../lib/format'
@@ -152,6 +154,7 @@ export default function PacienteDetalle() {
   const { pacientes, consultas, especialistas, sesion, notify } = useStore()
   const [asc, setAsc] = useState(false)
   const [receta, setReceta] = useState<string | null>(null)
+  const [accesoAbierto, setAccesoAbierto] = useState(false)
 
   // CA-03 error: `?simularError=1` reproduce una falla de carga para la prueba PT03; «Reintentar» quita la bandera.
   const fallo = params.get('simularError') === '1'
@@ -187,6 +190,7 @@ export default function PacienteDetalle() {
 
   return (
     <>
+      {accesoAbierto && <AccesoPortalModal paciente={p} onCerrar={() => setAccesoAbierto(false)} />}
       <Link to="/admin/pacientes" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-ink-900"><ArrowLeft className="size-4" /> Pacientes</Link>
 
       <Card className="relative mb-6 animate-fade-up overflow-hidden">
@@ -204,7 +208,13 @@ export default function PacienteDetalle() {
               <p className="mt-1 text-ink-500">{p.padecimientoPrincipal} · {edad(p.fechaNacimiento)} años · {p.nacionalidad}</p>
             </div>
             <div className="flex flex-wrap gap-2 sm:pt-15">
-              {p.portal === 'invitado' && <Button variant="outline" size="sm" onClick={() => notify(`Invitación reenviada a ${p.email}`)}><Send className="size-4" /> Reenviar acceso</Button>}
+              {supabase && p.portal === 'sin acceso' && <Button variant="secondary" size="sm" onClick={() => setAccesoAbierto(true)}><KeyRound className="size-4" /> Crear acceso al portal</Button>}
+              {p.portal !== 'sin acceso' && <Button variant="outline" size="sm" onClick={async () => {
+                if (!supabase) { notify(`Invitación reenviada a ${p.email}`); return }
+                const { error } = await supabase.auth.resetPasswordForEmail(p.email, { redirectTo: `${window.location.origin}/nueva-contrasena` })
+                if (error) notify('No se pudo enviar el enlace. Inténtalo en unos minutos.', 'error')
+                else notify(`Enlace de acceso enviado a ${p.email}`)
+              }}><Send className="size-4" /> {p.portal === 'invitado' ? 'Reenviar acceso' : 'Enviar enlace de acceso'}</Button>}
               <ButtonLink to={`/admin/consultas/nueva?paciente=${p.id}`} size="sm"><Plus className="size-4" /> Registrar consulta</ButtonLink>
             </div>
           </div>

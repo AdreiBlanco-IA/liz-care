@@ -20,6 +20,8 @@ import Tratamiento from './pages/portal/Tratamiento'
 import Landing from './pages/public/Landing'
 import Login from './pages/public/Login'
 import NotFound from './pages/public/NotFound'
+import NuevaContrasena from './pages/public/NuevaContrasena'
+import RecuperarAcceso from './pages/public/RecuperarAcceso'
 import Privacidad from './pages/public/Privacidad'
 import { puedeAbrirRuta, rutaInicial } from './modules/identidad/permisos'
 
@@ -48,6 +50,8 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/privacidad" element={<Privacidad />} />
+        <Route path="/recuperar" element={<RecuperarAcceso />} />
+        <Route path="/nueva-contrasena" element={<NuevaContrasena />} />
         <Route path="/admin" element={<RequireRol rol="admin"><AdminLayout /></RequireRol>}>
           <Route index element={<Dashboard />} />
           <Route path="pacientes" element={<Pacientes />} />
