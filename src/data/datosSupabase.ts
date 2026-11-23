@@ -8,8 +8,8 @@ import type { ArchivoReceta, Consulta, Especialista, HistorialInicial, Medicamen
 import { aPaciente, type FilaPaciente } from './pacientesSupabase'
 
 const BUCKET = 'recetas'
-/** Duración de los enlaces temporales a las fotos de receta. */
-export const VIGENCIA_ENLACE_SEG = 3600
+/** Duración de los enlaces temporales a las fotos de receta: igual que la sesión (8 h), para que no venzan con la sesión abierta. */
+export const VIGENCIA_ENLACE_SEG = 8 * 3600
 
 const falla = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
 
