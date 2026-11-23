@@ -135,7 +135,104 @@ try {
   ok((esc.data ?? []).length === 0, 'paciente A: no puede cambiar su rol a administrador')
   const activar = await a.cliente.rpc('activar_portal')
   ok(!activar.error, 'paciente A: activar_portal funciona')
+
+  // ── Solicitudes del sitio público (solicitud_contacto)
+  const sol = (sufijo, extra = {}) => ({
+    tipo: 'cita', nombres: 'Sol', primer_apellido: 'Visitante', telefono: '+1 555 0199', correo: `Sol${sufijo}${marca}@Prueba.liz`, idioma: 'Inglés',
+    mensaje: 'Dolor de rodilla', nacimiento: '1975-05-05', sexo: 'F', nacionalidad: 'Estadounidense', pais: 'US',
+    emergencia_nombre: 'Contacto', emergencia_parentesco: 'Hermano', emergencia_telefono: '+1 555 0198', ...extra,
+  })
+  const mkSol = async (sufijo, extra) => {
+    const { data, error } = await servicio.from('solicitud_contacto').insert(sol(sufijo, extra)).select().single()
+    if (error) throw error
+    return data
+  }
+  const estadoSol = async (id) => (await servicio.from('solicitud_contacto').select('estado, paciente_id, resuelta_el').eq('id', id).single()).data
+
+  // (a) envío público completo, sin .select()
+  const envio = await anon.from('solicitud_contacto').insert(sol('a'))
+  ok(!envio.error, 'sin sesión: puede enviar una solicitud de cita completa', envio.error?.message)
+  const { data: solA } = await servicio.from('solicitud_contacto').select('*').ilike('correo', `sola${marca}@prueba.liz`).single()
+  ok(solA?.estado === 'nueva' && solA?.paciente_id === null && solA?.tipo === 'cita', 'la solicitud pública queda «nueva» y sin paciente')
+  // (b) no puede leer
+  const leeSol = await anon.from('solicitud_contacto').select('*')
+  ok(!!leeSol.error || (leeSol.data ?? []).length === 0, 'sin sesión: no puede leer solicitudes')
+  // (c) no puede forzar estado ni paciente_id
+  const fuerzaEstado = await anon.from('solicitud_contacto').insert({ ...sol('c1'), estado: 'aceptada' })
+  ok(!!fuerzaEstado.error, 'sin sesión: no puede insertar con estado «aceptada»')
+  const fuerzaPac = await anon.from('solicitud_contacto').insert({ ...sol('c2'), paciente_id: pa.id })
+  ok(!!fuerzaPac.error, 'sin sesión: no puede insertar con paciente_id')
+  // (d) cita sin emergencia
+  const sinEmerg = await anon.from('solicitud_contacto').insert(sol('d', { emergencia_nombre: null, emergencia_parentesco: null, emergencia_telefono: null }))
+  ok(!!sinEmerg.error, 'una cita sin datos de emergencia es rechazada', sinEmerg.error?.message)
+  // (e) correo inválido
+  const malCorreo = await anon.from('solicitud_contacto').insert(sol('e', { correo: 'no-es-correo' }))
+  ok(!!malCorreo.error, 'un correo inválido es rechazado')
+  // (f) paciente con sesión
+  const pSol = await a.cliente.from('solicitud_contacto').select('id')
+  ok((pSol.data ?? []).length === 0, 'paciente A: no ve solicitudes')
+  const pAcep = await a.cliente.rpc('aceptar_solicitud', { p_id: solA.id })
+  ok(pAcep.error?.code === '42501', 'paciente A: aceptar_solicitud denegado (42501)', pAcep.error?.message)
+  const pRech = await a.cliente.rpc('rechazar_solicitud', { p_id: solA.id })
+  ok(pRech.error?.code === '42501', 'paciente A: rechazar_solicitud denegado (42501)', pRech.error?.message)
+  const pEdit = await a.cliente.from('solicitud_contacto').update({ estado: 'aceptada' }).eq('id', solA.id).select()
+  ok((pEdit.data ?? []).length === 0, 'paciente A: no puede editar solicitudes')
+  // (g) anon no ejecuta los rpc
+  const gAcep = await anon.rpc('aceptar_solicitud', { p_id: solA.id })
+  ok(!!gAcep.error, 'sin sesión: aceptar_solicitud denegado', gAcep.error?.message)
+  const gRech = await anon.rpc('rechazar_solicitud', { p_id: solA.id })
+  ok(!!gRech.error, 'sin sesión: rechazar_solicitud denegado', gRech.error?.message)
+  ok((await estadoSol(solA.id)).estado === 'nueva', 'tras los intentos denegados la solicitud sigue «nueva»')
+  // (h) la administradora acepta
+  const adSol = await admin.cliente.from('solicitud_contacto').select('id').eq('id', solA.id)
+  ok(adSol.data?.length === 1, 'admin: ve la solicitud')
+  const acep = await admin.cliente.rpc('aceptar_solicitud', { p_id: solA.id })
+  ok(!acep.error && typeof acep.data === 'string' && /^[0-9a-f-]{36}$/.test(acep.data), 'admin: aceptar_solicitud devuelve el uuid del paciente', acep.error?.message)
+  if (acep.data) creados.pacientes.push(acep.data)
+  const { data: pn } = await servicio.from('paciente').select('*').eq('id', acep.data ?? '00000000-0000-0000-0000-000000000000').maybeSingle()
+  ok(!!pn && pn.correo === `sola${marca}@prueba.liz` && pn.padecimiento_principal === 'Dolor de rodilla', 'el paciente creado tiene el correo en minúsculas y padecimiento = mensaje', JSON.stringify(pn))
+  ok(!!pn && pn.nombres === 'Sol' && pn.primer_apellido === 'Visitante' && pn.telefono === '+1 555 0199' && pn.nacimiento === '1975-05-05' && pn.sexo === 'F'
+    && pn.nacionalidad === 'Estadounidense' && pn.pais === 'US' && pn.idioma === 'Inglés' && pn.emergencia_nombre === 'Contacto'
+    && pn.emergencia_parentesco === 'Hermano' && pn.emergencia_telefono === '+1 555 0198', 'el paciente creado conserva los demás datos de la solicitud')
+  ok(pn?.estado === 'activo' && pn?.portal === 'sin acceso' && pn?.usuario_id === null, 'el paciente nuevo está activo y sin acceso al portal')
+  const stA = await estadoSol(solA.id)
+  ok(stA.estado === 'aceptada' && stA.paciente_id === acep.data && !!stA.resuelta_el, 'la solicitud queda «aceptada» con paciente_id')
+  const otraVez = await admin.cliente.rpc('aceptar_solicitud', { p_id: solA.id })
+  ok(!!otraVez.error && /ya-resuelta/.test(otraVez.error.message), 'aceptar de nuevo falla (ya-resuelta)', otraVez.error?.message)
+  const rechAcept = await admin.cliente.rpc('rechazar_solicitud', { p_id: solA.id })
+  ok(!!rechAcept.error && /ya-resuelta/.test(rechAcept.error.message), 'rechazar una ya aceptada falla (ya-resuelta)', rechAcept.error?.message)
+  const noExiste = await admin.cliente.rpc('aceptar_solicitud', { p_id: crypto.randomUUID() })
+  ok(noExiste.error?.code === 'P0002', 'aceptar una solicitud inexistente falla (P0002)', noExiste.error?.message)
+  // (i) mismo correo que un paciente existente
+  const solDup = await mkSol('a')
+  const dup = await admin.cliente.rpc('aceptar_solicitud', { p_id: solDup.id })
+  ok(dup.error?.code === '23505', 'aceptar con un correo ya registrado falla (23505)', dup.error?.message)
+  const stDup = await estadoSol(solDup.id)
+  ok(stDup.estado === 'nueva' && stDup.paciente_id === null && stDup.resuelta_el === null, 'la solicitud con correo duplicado queda «nueva» sin cambios')
+  const cuenta1 = await servicio.from('paciente').select('id').ilike('correo', `sola${marca}@prueba.liz`)
+  ok(cuenta1.data?.length === 1, 'no se creó un segundo paciente con ese correo')
+  // (j) rechazar
+  const solR = await mkSol('r')
+  const rech = await admin.cliente.rpc('rechazar_solicitud', { p_id: solR.id })
+  ok(!rech.error, 'admin: rechazar_solicitud funciona', rech.error?.message)
+  const stR = await estadoSol(solR.id)
+  ok(stR.estado === 'rechazada' && stR.paciente_id === null && !!stR.resuelta_el, 'la solicitud queda «rechazada» sin paciente')
+  const pR = await servicio.from('paciente').select('id').ilike('correo', `solr${marca}@prueba.liz`)
+  ok((pR.data ?? []).length === 0, 'rechazar no crea paciente')
+  const aceptaRech = await admin.cliente.rpc('aceptar_solicitud', { p_id: solR.id })
+  ok(!!aceptaRech.error && /ya-resuelta/.test(aceptaRech.error.message), 'aceptar una rechazada falla (ya-resuelta)')
+  // (k) informes (solo contacto)
+  const envInf = await anon.from('solicitud_contacto').insert({ tipo: 'informes', nombres: 'Info', primer_apellido: 'Curioso', telefono: '+1 555 0177', correo: `solinf${marca}@prueba.liz` })
+  ok(!envInf.error, 'sin sesión: puede enviar una solicitud de informes (solo contacto)', envInf.error?.message)
+  const { data: solI } = await servicio.from('solicitud_contacto').select('id').ilike('correo', `solinf${marca}@prueba.liz`).single()
+  const acepI = await admin.cliente.rpc('aceptar_solicitud', { p_id: solI.id })
+  ok(!acepI.error && acepI.data === null, 'aceptar una solicitud de informes devuelve null', acepI.error?.message)
+  const stI = await estadoSol(solI.id)
+  ok(stI.estado === 'aceptada' && stI.paciente_id === null, 'la de informes queda «aceptada» sin paciente')
+  const pI = await servicio.from('paciente').select('id').ilike('correo', `solinf${marca}@prueba.liz`)
+  ok((pI.data ?? []).length === 0, 'una solicitud de informes no crea paciente')
 } finally {
+  await servicio.from('solicitud_contacto').delete().ilike('correo', `%${marca}@prueba.liz`)
   for (const r of creados.archivos) await servicio.storage.from('recetas').remove([r])
   for (const p of creados.pacientes) { await servicio.from('atencion').delete().eq('paciente_id', p); await servicio.from('historial_medico').delete().eq('paciente_id', p); await servicio.from('paciente').delete().eq('id', p) }
   for (const e of creados.especialistas) await servicio.from('especialista').delete().eq('id', e)
