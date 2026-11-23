@@ -1,6 +1,6 @@
 import {
   AlertTriangle, ArrowDownUp, RotateCcw, ArrowLeft, CalendarDays, Cake, ChevronDown, ClipboardList, Eye, FileImage, Globe2, Languages, Lock,
-  KeyRound, Mail, Phone, Pill, Plus, Send, ShieldAlert, Stethoscope, UserRound,
+  KeyRound, Mail, Pencil, Phone, Pill, Plus, Send, ShieldAlert, Stethoscope, UserRound,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -215,6 +215,7 @@ export default function PacienteDetalle() {
                 if (error) notify('No se pudo enviar el enlace. Inténtalo en unos minutos.', 'error')
                 else notify(`Enlace de acceso enviado a ${p.email}`)
               }}><Send className="size-4" /> {p.portal === 'invitado' ? 'Reenviar acceso' : 'Enviar enlace de acceso'}</Button>}
+              <ButtonLink to={`/admin/pacientes/${p.id}/editar`} variant="outline" size="sm"><Pencil className="size-4" /> Editar datos</ButtonLink>
               <ButtonLink to={`/admin/consultas/nueva?paciente=${p.id}`} size="sm"><Plus className="size-4" /> Registrar consulta</ButtonLink>
             </div>
           </div>
