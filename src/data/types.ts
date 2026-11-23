@@ -83,6 +83,10 @@ export interface ArchivoReceta {
   nombreOriginal: string
   tipoMime: string
   tamanoBytes: number
+  /** Ruta en el bucket privado «recetas»; solo existe cuando la receta ya está guardada en Supabase. */
+  ruta?: string
+  /** Archivo elegido en el navegador, pendiente de subir. No se guarda ni se serializa. */
+  archivo?: File
 }
 
 /** v4: una atención es una cita programada o una consulta realizada. */

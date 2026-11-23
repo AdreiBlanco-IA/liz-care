@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { Avatar, ButtonLink, cx } from '../components/ui'
 import { nombreCompleto, normalizar } from '../lib/format'
+import { PantallaCarga } from '../components/PantallaCarga'
 import { useStore } from '../lib/store'
 
 const nav = [
@@ -55,7 +56,7 @@ function BuscadorGlobal() {
 }
 
 export default function AdminLayout() {
-  const { sesion, logout } = useStore()
+  const { sesion, logout, cargando } = useStore()
   const navigate = useNavigate()
   const salir = () => { logout(); navigate('/login') }
 
@@ -117,7 +118,7 @@ export default function AdminLayout() {
         </header>
 
         <main className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
-          <Outlet />
+          {cargando ? <PantallaCarga /> : <Outlet />}
         </main>
       </div>
 

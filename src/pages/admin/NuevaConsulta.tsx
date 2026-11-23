@@ -80,7 +80,9 @@ export default function NuevaConsulta() {
     const v = validarArchivoReceta({ nombre: f.name, tipo: f.type, tamano: f.size })
     if (!v.ok) { setErrArchivo(v.mensaje); notify(v.mensaje, 'error'); return }
     setErrArchivo('')
-    setReceta(aArchivoReceta({ nombre: f.name, tipo: f.type, tamano: f.size }, URL.createObjectURL(f)))
+    const a = aArchivoReceta({ nombre: f.name, tipo: f.type, tamano: f.size }, URL.createObjectURL(f))
+    // El archivo se conserva para subirlo al almacenamiento privado al guardar la consulta.
+    setReceta(a ? { ...a, archivo: f } : null)
   }
 
   // M04 valida y guarda: paciente y especialista existentes, resumen en la consulta realizada, tratamiento y receta válidos.
