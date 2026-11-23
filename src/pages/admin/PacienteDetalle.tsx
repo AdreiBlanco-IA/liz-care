@@ -7,6 +7,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Lightbox } from '../../components/Lightbox'
 import { supabase } from '../../data/supabase'
 import { AccesoPortalModal } from './AccesoPortal'
+import { useEnlaceReceta } from '../../lib/useEnlaceReceta'
 import { Avatar, Badge, Button, ButtonLink, Card, CardHeader, DoctorChip, EmptyState, Tabs, cx } from '../../components/ui'
 import type { Consulta, Especialista } from '../../data/types'
 import { diaMes, edad, fechaCorta, fechaLarga, hora, nombreCompleto, relativo } from '../../lib/format'
@@ -63,8 +64,22 @@ function TratamientoTabla({ c }: { c: Consulta }) {
   )
 }
 
+function RecetaTarjeta({ c, especialidad, onAbrir }: { c: Consulta; especialidad: string; onAbrir: (src: string) => void }) {
+  const url = useEnlaceReceta(c.receta)
+  return (
+    <button onClick={() => url && onAbrir(url)} className="group overflow-hidden rounded-2xl border border-ink-100 bg-white text-left shadow-card transition hover:shadow-float">
+      <div className="h-48 overflow-hidden">{url ? <img src={url} alt="" className="size-full object-cover object-top transition duration-300 group-hover:scale-105" /> : <span className="grid size-full place-items-center bg-ink-50 text-xs text-ink-400">Cargando…</span>}</div>
+      <div className="p-4">
+        <p className="font-bold">{especialidad}</p>
+        <p className="text-sm text-ink-500">{fechaCorta(c.fecha)} · {c.tratamiento?.medicamentos.length ?? 0} medicamentos</p>
+      </div>
+    </button>
+  )
+}
+
 function ConsultaItem({ c, e, onReceta, defaultOpen }: { c: Consulta; e: Especialista; onReceta: (src: string) => void; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
+  const urlReceta = useEnlaceReceta(c.receta)
   const d = diaMes(c.fecha)
   const futura = c.estado === 'programada'
   return (
@@ -105,8 +120,8 @@ function ConsultaItem({ c, e, onReceta, defaultOpen }: { c: Consulta; e: Especia
                 </div>
               </div>
               {c.receta && (
-                <button onClick={() => onReceta(c.receta!.url)} className="group relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-ink-100 lg:w-36">
-                  <img src={c.receta.url} alt="Foto de la receta" className="size-full object-cover object-top transition group-hover:scale-105" />
+                <button onClick={() => urlReceta && onReceta(urlReceta)} className="group relative h-40 w-full shrink-0 overflow-hidden rounded-xl border border-ink-100 lg:w-36">
+                  {urlReceta ? <img src={urlReceta} alt="Foto de la receta" className="size-full object-cover object-top transition group-hover:scale-105" /> : <span className="grid size-full place-items-center bg-ink-50 text-xs text-ink-400">Cargando…</span>}
                   <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-950/80 to-transparent p-2 text-xs font-semibold text-white">Ver receta</span>
                 </button>
               )}
@@ -361,15 +376,7 @@ export default function PacienteDetalle() {
         {tab === 'recetas' && (
           recetas.length ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {recetas.map((c) => (
-                <button key={c.id} onClick={() => setReceta(c.receta!.url)} className="group overflow-hidden rounded-2xl border border-ink-100 bg-white text-left shadow-card transition hover:shadow-float">
-                  <div className="h-48 overflow-hidden"><img src={c.receta!.url} alt="" className="size-full object-cover object-top transition duration-300 group-hover:scale-105" /></div>
-                  <div className="p-4">
-                    <p className="font-bold">{esp(c.especialistaId).especialidad}</p>
-                    <p className="text-sm text-ink-500">{fechaCorta(c.fecha)} · {c.tratamiento?.medicamentos.length ?? 0} medicamentos</p>
-                  </div>
-                </button>
-              ))}
+              {recetas.map((c) => <RecetaTarjeta key={c.id} c={c} especialidad={esp(c.especialistaId).especialidad} onAbrir={setReceta} />)}
             </div>
           ) : <Card><EmptyState icon={<FileImage className="size-6" />} title="Sin recetas" text="Las fotos de recetas aparecerán aquí al registrarlas en una consulta." /></Card>
         )}

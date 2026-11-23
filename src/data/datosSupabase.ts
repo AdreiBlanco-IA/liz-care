@@ -8,8 +8,6 @@ import type { ArchivoReceta, Consulta, Especialista, HistorialInicial, Medicamen
 import { aPaciente, type FilaPaciente } from './pacientesSupabase'
 
 const BUCKET = 'recetas'
-/** Duración de los enlaces temporales a las fotos de receta: igual que la sesión (8 h), para que no venzan con la sesión abierta. */
-export const VIGENCIA_ENLACE_SEG = 8 * 3600
 
 const falla = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
 
@@ -48,15 +46,8 @@ interface FilaAtencion {
 
 const SELECT_ATENCION = '*, atencion_nota_interna(nota), archivo_receta(ruta, nombre_original, tipo_mime, tamano_bytes), medicamento_prescrito(*)'
 
-async function aConsultas(db: SupabaseClient, filas: FilaAtencion[]): Promise<Consulta[]> {
-  // Enlaces temporales firmados: la foto nunca tiene una URL pública.
-  const rutas = filas.flatMap((f) => (f.archivo_receta ? [f.archivo_receta.ruta] : []))
-  const firmas = new Map<string, string>()
-  if (rutas.length) {
-    const { data, error } = await db.storage.from(BUCKET).createSignedUrls(rutas, VIGENCIA_ENLACE_SEG)
-    if (error) throw new Error(error.message)
-    for (const d of data) if (d.path && d.signedUrl) firmas.set(d.path, d.signedUrl)
-  }
+async function aConsultas(filas: FilaAtencion[]): Promise<Consulta[]> {
+  // La foto nunca tiene una URL pública: no se firma aquí, se firma al mostrarla (src/lib/useEnlaceReceta.ts).
   return filas.map((f) => {
     const meds = [...f.medicamento_prescrito].sort((a, b) => a.orden - b.orden)
     const completada = f.estado === 'completada'
@@ -72,7 +63,7 @@ async function aConsultas(db: SupabaseClient, filas: FilaAtencion[]): Promise<Co
           }
         : undefined,
       receta: f.archivo_receta
-        ? { url: firmas.get(f.archivo_receta.ruta) ?? '', nombreOriginal: f.archivo_receta.nombre_original, tipoMime: f.archivo_receta.tipo_mime, tamanoBytes: f.archivo_receta.tamano_bytes, ruta: f.archivo_receta.ruta }
+        ? { url: '', nombreOriginal: f.archivo_receta.nombre_original, tipoMime: f.archivo_receta.tipo_mime, tamanoBytes: f.archivo_receta.tamano_bytes, ruta: f.archivo_receta.ruta }
         : undefined,
     }
   })
@@ -106,9 +97,16 @@ export async function cargarDatos(db: SupabaseClient): Promise<DatosRemotos> {
   return {
     pacientes: (p.data as FilaPaciente[]).map((f) => ({ ...aPaciente(f), historialInicial: historiales.get(f.id) })),
     especialistas: (e.data as FilaEspecialista[]).map(aEspecialista),
-    consultas: await aConsultas(db, a.data as unknown as FilaAtencion[]),
+    consultas: await aConsultas(a.data as unknown as FilaAtencion[]),
     solicitudes: (so.data as FilaSolicitud[]).map(aSolicitud),
   }
+}
+
+/** Enlace temporal a una receta del bucket privado; solo lo obtiene quien tiene permiso (RLS de Storage). */
+export async function firmarReceta(db: SupabaseClient, ruta: string, segundos: number): Promise<string | undefined> {
+  const { data, error } = await db.storage.from(BUCKET).createSignedUrl(ruta, segundos)
+  if (error) throw new Error(error.message)
+  return data.signedUrl
 }
 
 // ── Escritura de atenciones ─────────────────────────────────────────────────────────────────
@@ -169,8 +167,7 @@ export async function guardarAtencionRemota(db: SupabaseClient, c: EntradaConsul
       const subida = await subirReceta(db, c.pacienteId, id, c.receta)
       falla((await db.from('archivo_receta').upsert({ atencion_id: id, ruta: subida.ruta, nombre_original: subida.nombreOriginal, tipo_mime: subida.tipoMime, tamano_bytes: subida.tamanoBytes }, { onConflict: 'atencion_id' })).error)
       if (existente?.receta?.ruta) await db.storage.from(BUCKET).remove([existente.receta.ruta])
-      const firma = await db.storage.from(BUCKET).createSignedUrl(subida.ruta, VIGENCIA_ENLACE_SEG)
-      receta = { ...subida, archivo: undefined, url: firma.data?.signedUrl ?? '' }
+      receta = { ...subida, archivo: undefined, url: '' } // se firma al mostrarla
     } else if (!c.receta && existente?.receta?.ruta) {
       falla((await db.from('archivo_receta').delete().eq('atencion_id', id)).error)
       await db.storage.from(BUCKET).remove([existente.receta.ruta])
