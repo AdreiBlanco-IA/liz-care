@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { administradores, consultasIniciales, credencialesDemo, especialistas as especialistasIniciales, pacientesIniciales } from '../data/mock'
 import { insertarPaciente } from '../data/pacientesSupabase'
-import { cargarDatos, crearCuentaPaciente, guardarAtencionRemota, insertarEspecialista, insertarHistorial, type ModoCuenta, type ResultadoCuenta } from '../data/datosSupabase'
+import { actualizarPacienteRemoto, aceptarSolicitudRemota, cargarDatos, crearCuentaPaciente, insertarSolicitud, rechazarSolicitudRemota, guardarAtencionRemota, insertarEspecialista, insertarHistorial, type EntradaSolicitud, type ModoCuenta, type ResultadoCuenta, type ResultadoResolucion } from '../data/datosSupabase'
 import { supabase } from '../data/supabase'
-import type { Consulta, Especialista, HistorialInicial, Paciente, Rol, Sesion } from '../data/types'
+import type { Consulta, Especialista, HistorialInicial, Paciente, Rol, Sesion, Solicitud } from '../data/types'
 import { registrarAtencion, type DatosAtencion, type NuevaConsulta, type ResultadoAtencion } from '../modules/citas/atenciones'
 import { registrarEspecialista, type DatosEspecialista, type NuevoEspecialista, type ResultadoEspecialista } from '../modules/especialistas/catalogo'
+import type { NuevoPaciente } from '../modules/pacientes/registro'
 import { enviarHistorial, type RespuestasHistorial, type ResultadoHistorial } from '../modules/historial-inicial/historial'
 import { iniciarSesionEnMemoria, sesionVigente } from '../modules/identidad/autenticacion'
 import { registrarIncidente } from '../modules/privacidad/inventario'
@@ -16,6 +17,8 @@ interface Store {
   pacientes: Paciente[]
   consultas: Consulta[]
   especialistas: Especialista[]
+  /** Solicitudes del sitio público; solo la administración las recibe. */
+  solicitudes: Solicitud[]
   sesion: Sesion | null
   toasts: Toast[]
   /** Con Supabase: true mientras se leen los datos tras iniciar sesión (o al recargar la página). */
@@ -23,8 +26,16 @@ interface Store {
   login: (email: string, password: string, rol: Rol) => Promise<boolean>
   logout: () => void
   agregarPaciente: (p: Omit<Paciente, 'id' | 'altaEl' | 'color'>) => Promise<Paciente>
+  /** M02: corrige los datos de un paciente (el correo se sincroniza con su cuenta de acceso). */
+  actualizarPaciente: (id: string, datos: NuevoPaciente) => Promise<Paciente>
   /** Administración: crea la cuenta de acceso del paciente en Supabase Auth (invitación por correo o contraseña temporal). */
   crearCuenta: (pacienteId: string, modo: ModoCuenta) => Promise<ResultadoCuenta>
+  /** Sitio público (sin sesión): envía una solicitud. Devuelve false si no se pudo guardar. */
+  enviarSolicitud: (s: EntradaSolicitud) => Promise<boolean>
+  /** ✓ Administración: acepta la solicitud y crea al paciente con sus datos. */
+  aceptarSolicitud: (id: string) => Promise<ResultadoResolucion>
+  /** ✗ Administración: rechaza la solicitud; no se integra como paciente. */
+  rechazarSolicitud: (id: string) => Promise<ResultadoResolucion>
   /** Vuelve a leer los datos desde Supabase (reintento tras un error de carga). */
   recargar: () => Promise<void>
   /** M11: valida y guarda un especialista en el catálogo (solo administración). */
@@ -57,6 +68,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [pacientes, setPacientes] = useState<Paciente[]>(supabase ? [] : pacientesIniciales)
   const [consultas, setConsultas] = useState<Consulta[]>(supabase ? [] : consultasIniciales)
   const [especialistas, setEspecialistas] = useState<Especialista[]>(supabase ? [] : especialistasIniciales)
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion)
   const [cargando, setCargando] = useState(() => Boolean(supabase && leerSesion()))
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -69,7 +81,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const vaciarDatos = useCallback(() => {
     if (!supabase) return // en memoria se conservan (por ejemplo, un historial ya enviado)
-    setPacientes([]); setConsultas([]); setEspecialistas([])
+    setPacientes([]); setConsultas([]); setEspecialistas([]); setSolicitudes([])
   }, [])
 
   // M01: la sesión expira; al vencer se cierra y se pide iniciar sesión de nuevo.
@@ -93,7 +105,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCargando(true)
     try {
       const d = await cargarDatos(supabase)
-      setPacientes(d.pacientes); setEspecialistas(d.especialistas); setConsultas(d.consultas)
+      setPacientes(d.pacientes); setEspecialistas(d.especialistas); setConsultas(d.consultas); setSolicitudes(d.solicitudes)
     } catch {
       notify('No se pudieron cargar los datos guardados. Intenta de nuevo.', 'error')
     } finally {
@@ -174,6 +186,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return r
   }, [sesion?.rol])
 
+  const actualizarPaciente = useCallback(async (id: string, datos: NuevoPaciente) => {
+    const actual = pacientes.find((p) => p.id === id)
+    if (!actual) throw new Error('no-existe')
+    const guardado: Paciente = supabase ? await actualizarPacienteRemoto(supabase, id, datos, actual.email) : { ...actual, ...datos }
+    // Se conservan el historial, el color y el estado del portal del expediente existente.
+    const nuevo: Paciente = { ...guardado, historialInicial: actual.historialInicial, color: actual.color, activo: actual.activo, portal: actual.portal, altaEl: actual.altaEl }
+    setPacientes((ps) => ps.map((p) => (p.id === id ? nuevo : p)))
+    return nuevo
+  }, [pacientes])
+
+  const enviarSolicitud = useCallback(async (e: EntradaSolicitud) => {
+    try {
+      if (supabase) await insertarSolicitud(supabase, e)
+      else setSolicitudes((ss) => [{ ...e, id: `s-${crypto.randomUUID()}`, creadaEl: new Date().toISOString(), estado: 'nueva' }, ...ss])
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
+  const aceptarSolicitud = useCallback(async (id: string): Promise<ResultadoResolucion> => {
+    if (sesion?.rol !== 'admin') return { ok: false, error: 'error' }
+    const sol = solicitudes.find((x) => x.id === id)
+    if (!sol || sol.estado !== 'nueva') return { ok: false, error: 'ya-resuelta' }
+    let paciente: Paciente
+    if (supabase) {
+      const r = await aceptarSolicitudRemota(supabase, id)
+      if (!r.ok) return r
+      if (!r.paciente) { // informes: solo se marca atendida
+        setSolicitudes((ss) => ss.map((x) => (x.id === id ? { ...x, estado: 'aceptada', resueltaEl: new Date().toISOString() } : x)))
+        return { ok: true }
+      }
+      paciente = r.paciente
+    } else {
+      if (sol.tipo === 'informes') {
+        setSolicitudes((ss) => ss.map((x) => (x.id === id ? { ...x, estado: 'aceptada', resueltaEl: new Date().toISOString() } : x)))
+        return { ok: true }
+      }
+      if (sol.tipo !== 'cita' || !sol.fechaNacimiento || !sol.sexo || !sol.contactoEmergencia) return { ok: false, error: 'sin-datos' }
+      if (pacientes.some((p) => p.email.toLowerCase() === sol.email.toLowerCase())) return { ok: false, error: 'correo-duplicado' }
+      paciente = {
+        id: `p-${crypto.randomUUID()}`, nombre: sol.nombre, apellidoPaterno: sol.apellidoPaterno, apellidoMaterno: sol.apellidoMaterno,
+        fechaNacimiento: sol.fechaNacimiento, sexo: sol.sexo, nacionalidad: sol.nacionalidad ?? '', pais: sol.pais ?? 'XX', idioma: sol.idioma ?? '',
+        telefono: sol.telefono, email: sol.email.toLowerCase(), padecimientoPrincipal: sol.mensaje ?? '', contactoEmergencia: sol.contactoEmergencia,
+        altaEl: new Date().toISOString(), activo: true, portal: 'sin acceso', color: COLORES[Math.floor(Math.random() * COLORES.length)],
+      }
+    }
+    setPacientes((ps) => [paciente, ...ps])
+    setSolicitudes((ss) => ss.map((x) => (x.id === id ? { ...x, estado: 'aceptada', pacienteId: paciente.id, resueltaEl: new Date().toISOString() } : x)))
+    return { ok: true, paciente }
+  }, [sesion?.rol, solicitudes, pacientes])
+
+  const rechazarSolicitud = useCallback(async (id: string): Promise<ResultadoResolucion> => {
+    if (sesion?.rol !== 'admin') return { ok: false, error: 'error' }
+    if (supabase) {
+      const r = await rechazarSolicitudRemota(supabase, id)
+      if (!r.ok) return r
+    }
+    setSolicitudes((ss) => ss.map((x) => (x.id === id && x.estado === 'nueva' ? { ...x, estado: 'rechazada', resueltaEl: new Date().toISOString() } : x)))
+    return { ok: true }
+  }, [sesion?.rol])
+
   const reportarFallo = useCallback((contexto: string) => registrarIncidente('guardado sin confirmar', contexto).id, [])
 
   const guardarEspecialista = useCallback((d: DatosEspecialista) => registrarEspecialista(d, {
@@ -214,9 +288,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }), [sesion, pacientes])
 
   const value = useMemo<Store>(() => ({
-    pacientes, consultas, especialistas, sesion, toasts, cargando,
-    login, logout, agregarPaciente, crearCuenta, recargar, guardarEspecialista, guardarAtencion, enviarHistorialInicial, reportarFallo, notify,
-  }), [pacientes, consultas, especialistas, sesion, toasts, cargando, login, logout, agregarPaciente, crearCuenta, recargar, guardarEspecialista, guardarAtencion, enviarHistorialInicial, reportarFallo, notify])
+    pacientes, consultas, especialistas, solicitudes, sesion, toasts, cargando,
+    login, logout, agregarPaciente, actualizarPaciente, crearCuenta, enviarSolicitud, aceptarSolicitud, rechazarSolicitud, recargar, guardarEspecialista, guardarAtencion, enviarHistorialInicial, reportarFallo, notify,
+  }), [pacientes, consultas, especialistas, solicitudes, sesion, toasts, cargando, login, logout, agregarPaciente, actualizarPaciente, crearCuenta, enviarSolicitud, aceptarSolicitud, rechazarSolicitud, recargar, guardarEspecialista, guardarAtencion, enviarHistorialInicial, reportarFallo, notify])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

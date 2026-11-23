@@ -12,6 +12,7 @@ import NuevaConsulta from './pages/admin/NuevaConsulta'
 import NuevoPaciente from './pages/admin/NuevoPaciente'
 import PacienteDetalle from './pages/admin/PacienteDetalle'
 import Pacientes from './pages/admin/Pacientes'
+import Solicitudes from './pages/admin/Solicitudes'
 import Citas from './pages/portal/Citas'
 import Expediente from './pages/portal/Expediente'
 import HistorialForm from './pages/portal/HistorialForm'
@@ -54,8 +55,10 @@ export default function App() {
         <Route path="/nueva-contrasena" element={<NuevaContrasena />} />
         <Route path="/admin" element={<RequireRol rol="admin"><AdminLayout /></RequireRol>}>
           <Route index element={<Dashboard />} />
+          <Route path="solicitudes" element={<Solicitudes />} />
           <Route path="pacientes" element={<Pacientes />} />
           <Route path="pacientes/nuevo" element={<NuevoPaciente />} />
+          <Route path="pacientes/:id/editar" element={<NuevoPaciente />} />
           <Route path="pacientes/:id" element={<PacienteDetalle />} />
           <Route path="consultas/nueva" element={<NuevaConsulta />} />
           <Route path="agenda" element={<Agenda />} />
